@@ -39,6 +39,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .more{margin-top:16px;min-height:76px;min-width:300px;padding:0 28px;border-radius:38px;border:4px solid var(--line);background:#fff;font-size:26px;font-weight:bold;box-shadow:0 4px 0 var(--line)}
 .more:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line);background:#FFF0E4;border-color:var(--pri)}
 .more:disabled{opacity:.45}
+.credit{width:100%;max-width:980px;font-size:16px;color:var(--sub);text-align:right;margin:8px 0 0}
+.cont.jg img.flip{transform:scaleX(-1)}
 .counts{display:flex;flex-wrap:wrap;gap:14px;width:100%;max-width:980px}
 .cnt{flex:1 1 200px;min-height:100px;background:#fff;border:4px solid var(--line);border-radius:20px;font-size:32px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 8px}
 .cnt small{font-size:18px;font-weight:normal;color:var(--sub)}
@@ -242,6 +244,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <h3 class="subh" data-t="hCat">ねこの写真</h3>
   <p class="catMsg" id="catMsg"></p>
   <div class="pics" id="catPics"></div>
+  <p class="credit" id="catCredit" data-t="catCredit" style="display:none">写真:The Cat API / cataas</p>
   <button class="more" id="catMore" data-t="catMore">🔄 ほかの猫を見る</button>
   <h3 class="subh s2" data-t="hIllust">イラスト・iPadの写真</h3>
   <div class="pics" id="pics"></div>
@@ -249,6 +252,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="counts" id="counts"></div>
   <h2 data-t="hRot">③ ピースの向き</h2>
   <div class="counts" id="rots"></div>
+  <h2 data-t="hFlip">④ 絵の向き</h2>
+  <div class="counts" id="flips"></div>
   <button class="go" id="goBtn" data-t="go">始める</button>
 </section>
 
@@ -399,6 +404,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115065912"></script>
+<script src="app.js?v=20261115072804"></script>
 </body>
 </html>

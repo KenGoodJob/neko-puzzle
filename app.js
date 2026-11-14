@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115065912';
+const APP_VERSION='20261115072804';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -50,6 +50,10 @@ const T={
   catMore:['🔄 ほかの猫を見る','🔄 ほかの ねこを みる'],
   catWait:['読み込み中…','よみこみちゅう…'],
   catLoading:['猫の写真を読み込んでいます。少しお待ちください','ねこの しゃしんを よみこんでいます。すこし おまちください'],
+  catCredit:['写真:The Cat API / cataas','しゃしん:The Cat API / cataas'],
+  hFlip:['④ 絵の向き','④ えの むき'],
+  f0:['そのまま','そのまま'],f0d:['見たとおり','みた とおり'],
+  f1:['左右反転','さゆう はんてん'],f1d:['鏡に映した絵','かがみに うつした え'],
   catFail:['猫の写真を読み込めませんでした。下のイラストで遊べます','ねこの しゃしんを よみこめませんでした。したの イラストで あそべます'],
   c2:['とても簡単','とても かんたん'],c3:['簡単','かんたん'],c4:['普通','ふつう'],c5:['やや難しい','やや むずかしい'],
   c6:['難しい','むずかしい'],c7:['とても難しい','とても むずかしい'],c8:['達人','たつじん'],
@@ -322,6 +326,7 @@ function renderCatPics(){
   msg.classList.toggle('on',catState==='loading'||catState==='fail');
   msg.textContent=catState==='fail'?t('catFail'):catState==='loading'?t('catLoading'):'';
   more.disabled=catState==='loading';
+  $('#catCredit').style.display=catState==='ok'?'':'none';
   if(catState==='loading'){
     for(let i=0;i<CAT_N;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
     return;
@@ -345,6 +350,19 @@ function renderCounts(){
   });
 }
 const ROTS=[[false,'r0'],[true,'r1']];
+// 絵の左右反転(始める前に選ぶ。選んだものはiPad内に保存)
+const FLIP_KEY='jigsaw-flip';
+let selFlip=false;
+try{selFlip=localStorage.getItem(FLIP_KEY)==='1';}catch(e){}
+function renderFlips(){
+  const box=$('#flips');box.replaceChildren();
+  [[false,'f0'],[true,'f1']].forEach(([v,k])=>{
+    const b=document.createElement('button');b.className='cnt'+(v===selFlip?' sel':'');
+    b.append(document.createTextNode(t(k)),mk('small',null,t(k+'d')));
+    b.onclick=()=>{selFlip=v;try{localStorage.setItem(FLIP_KEY,v?'1':'0');}catch(e){}renderFlips();};
+    box.appendChild(b);
+  });
+}
 let selRot=false;
 function renderRots(){
   const box=$('#rots');box.replaceChildren();
@@ -359,7 +377,7 @@ function applyLang(){
   document.body.classList.toggle('kana',kana===1);
   document.querySelectorAll('[data-t]').forEach(e=>{e.textContent=t(e.dataset.t);});
   document.querySelectorAll('.lgb').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===kana));
-  renderPics();renderCatPics();renderCounts();renderRots();
+  renderPics();renderCatPics();renderCounts();renderRots();renderFlips();
   if(lastSec!=null)$('#doneMsg').textContent=doneText(lastSec);
   if(window.SD_READY)sdApplyLang();
   if(window.JG_READY)renderJgCont();
@@ -399,7 +417,7 @@ const area=$('#area'), boardCv=$('#board'), targetEl=$('#target'), tray=$('#tray
 const boardImg=document.createElement('canvas');
 const hitCtx=document.createElement('canvas').getContext('2d');
 const dpr=Math.min(2,window.devicePixelRatio||1);
-let G=null,pieces=[],trayList=[],N=3,ROT=false,zTop=10,drag=null,pend=null,placed=0,t0=0,timer=null;
+let G=null,pieces=[],trayList=[],N=3,ROT=false,FLIP=false,zTop=10,drag=null,pend=null,placed=0,t0=0,timer=null;
 let edgeOnly=false,guideOn=true,miniOn=true,playing=false,finished=false,curImg=null,hintTimer=null;
 
 // 凸凹の形(片側。h>0 が外向き)
@@ -549,7 +567,9 @@ function renderAll(){
   boardImg.width=Math.round(side*dpr);boardImg.height=Math.round(side*dpr);
   const bc=boardImg.getContext('2d'),iw=curImg.naturalWidth||curImg.width,ih=curImg.naturalHeight||curImg.height,sw=Math.min(iw,ih);
   bc.imageSmoothingQuality='high';
+  if(FLIP){bc.setTransform(-1,0,0,1,boardImg.width,0);} // 左右反転
   bc.drawImage(curImg,(iw-sw)/2,(ih-sw)/2,sw,sw,0,0,boardImg.width,boardImg.height);
+  bc.setTransform(1,0,0,1,0,0);
   drawBoard();drawMini();
   pieces.forEach(p=>{
     p.path=piecePath(p);
@@ -583,7 +603,7 @@ function makePieces(rots){
 async function newGame(){
   const item=curItem();
   try{curImg=await item.ready;}catch(e){goStart();return;}
-  N=selN;ROT=selRot;resetPlay();
+  N=selN;ROT=selRot;FLIP=selFlip;resetPlay();
   const rnd=()=>Math.random()<.5?1:-1;
   jgH=Array.from({length:N*N},rnd);jgV=Array.from({length:N*N},rnd);
   makePieces(Array.from({length:N*N},()=>ROT?[0,90,180,270][Math.floor(Math.random()*4)]:0));
@@ -818,7 +838,7 @@ function jgSnap(){
     const w=p.where==='lock'?2:(p.where==='field'||p.where==='drag')?1:0;
     return {w,fx:w===1?Math.round(p.fx*1e5)/1e5:0,fy:w===1?Math.round(p.fy*1e5)/1e5:0,rot:w===2?0:((p.rot%360)+360)%360,z:w===1?p.z:0};
   });
-  return {v:1,id:jgId,N,rot:ROT,h:jgH.slice(),vv:jgV.slice(),pc,tray:trayList.map(p=>pieces.indexOf(p)),el:Math.floor(jgElapsed()),edge:edgeOnly};
+  return {v:1,id:jgId,N,rot:ROT,flip:FLIP,h:jgH.slice(),vv:jgV.slice(),pc,tray:trayList.map(p=>pieces.indexOf(p)),el:Math.floor(jgElapsed()),edge:edgeOnly};
 }
 function jgSave(){if(!playing||!jgCanSave||!G)return;const s=jgSnap();jgQueue(()=>idbPut('jigsaw',s));}
 // 保存データは形式を確かめてから使う
@@ -826,6 +846,7 @@ function jgValid(s,im){
   if(!s||typeof s!=='object'||s.v!==1||typeof s.id!=='string'||!im||typeof im!=='object'||im.id!==s.id)return false;
   if(!COUNTS.includes(s.N))return false;
   const n=s.N*s.N,pm=a=>Array.isArray(a)&&a.length===n&&a.every(x=>x===1||x===-1);
+  if(s.flip!==undefined&&typeof s.flip!=='boolean')return false;
   if(typeof s.rot!=='boolean'||typeof s.edge!=='boolean'||!pm(s.h)||!pm(s.vv))return false;
   if(!Array.isArray(s.pc)||s.pc.length!==n)return false;
   for(const p of s.pc){
@@ -856,7 +877,7 @@ async function renderJgCont(){
   if(!d){cb.style.display='none';cb.replaceChildren();return;}
   let src;
   if(d.im.kind==='sample')src=images[d.im.idx].url;else{jgThumbUrl=URL.createObjectURL(d.im.blob);src=jgThumbUrl;}
-  const im=mk('img');im.alt='';im.src=safeImgUrl(src);
+  const im=mk('img');im.alt='';im.src=safeImgUrl(src);if(d.s.flip)im.className='flip';
   const left=d.s.pc.filter(p=>p.w!==2).length,tx=mk('span','ctx');
   tx.append(mk('span','ct',t('sdCont')),mk('small',null,t('left1')+' '+left+' '+t('left2')+' ・ ⏱ '+fmt(Math.floor(d.s.el))));
   cb.replaceChildren(im,tx);cb.style.display='';
@@ -866,7 +887,7 @@ async function jgRestore(d){
   if(im.kind==='sample'){selPic=im.idx;selApi=-1;item=images[im.idx];}
   else{const url=URL.createObjectURL(im.blob);item=Object.assign({no:++photoNo,url},loadImg(url));images.push(item);selPic=images.length-1;selApi=-1;renderPics();renderCatPics();}
   try{curImg=await item.ready;}catch(e){jgClear();jgContData=null;goStart();return;}
-  N=s.N;ROT=s.rot;selN=N;selRot=ROT;renderCounts();renderRots();
+  N=s.N;ROT=s.rot;FLIP=!!s.flip;selN=N;selRot=ROT;selFlip=FLIP;renderCounts();renderRots();renderFlips();
   jgH=s.h.slice();jgV=s.vv.slice();jgId=s.id;
   resetPlay();
   makePieces(s.pc.map(p=>p.rot));
