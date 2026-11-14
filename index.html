@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://cdn2.thecatapi.com https://cataas.com; connect-src 'self' https://api.thecatapi.com https://cataas.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ねこパズル">
+<title>ねこの脳トレパズル</title>
+<style>
+:root{--bg:#FFF8EC;--ink:#3B2F2A;--sub:#7A6A60;--pri:#E0713A;--pri-d:#B9551F;--line:#EAD9C4}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overflow:hidden}
+button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+#start,#menu,#sdStart{overflow-y:auto;padding:24px 28px 50px;align-items:center;-webkit-overflow-scrolling:touch}
+h1{font-size:40px;margin:8px 0 4px;letter-spacing:.05em;text-align:center}
+.lead{font-size:20px;color:var(--sub);margin:0 0 6px;text-align:center}
+h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
+.pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;width:100%;max-width:980px}
+.pic{background:#fff;border:4px solid var(--line);border-radius:20px;padding:8px;position:relative;text-align:center}
+.pic img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;display:block;background:#eee}
+.pic .nm{font-size:20px;padding:6px 0 2px}
+.pic.sel{border-color:var(--pri);box-shadow:0 0 0 4px rgba(224,113,58,.25)}
+.pic.sel::after{content:"✓";position:absolute;top:-12px;right:-12px;width:46px;height:46px;border-radius:50%;background:var(--pri);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.pic.photo{cursor:pointer}
+.pic.photo .ph{aspect-ratio:1/1;border-radius:12px;background:#F3E7D6;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;color:var(--sub);gap:4px}
+.pic.photo .ph b{font-size:52px;line-height:1}
+.pic.photo input{position:absolute;width:1px;height:1px;opacity:0}
+/* 猫の写真(API) */
+.subh{font-size:22px;color:var(--sub);margin:6px auto 10px;width:100%;max-width:980px}
+.subh.s2{margin-top:26px}
+.pic.wait .ph{aspect-ratio:1/1;border-radius:12px;background:#F3E7D6;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--sub);animation:waitp 1.4s ease-in-out infinite}
+@keyframes waitp{50%{opacity:.55}}
+.catMsg{width:100%;max-width:980px;font-size:21px;color:var(--sub);margin:0 0 10px;display:none}
+.catMsg.on{display:block}
+.more{margin-top:16px;min-height:76px;min-width:300px;padding:0 28px;border-radius:38px;border:4px solid var(--line);background:#fff;font-size:26px;font-weight:bold;box-shadow:0 4px 0 var(--line)}
+.more:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line);background:#FFF0E4;border-color:var(--pri)}
+.more:disabled{opacity:.45}
+.counts{display:flex;flex-wrap:wrap;gap:14px;width:100%;max-width:980px}
+.cnt{flex:1 1 200px;min-height:100px;background:#fff;border:4px solid var(--line);border-radius:20px;font-size:32px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 8px}
+.cnt small{font-size:18px;font-weight:normal;color:var(--sub)}
+.cnt.sel{border-color:var(--pri);background:#FFF0E4}
+.go{margin-top:34px;min-width:320px;min-height:92px;border:none;border-radius:46px;background:var(--pri);color:#fff;font-size:36px;font-weight:bold;box-shadow:0 6px 0 var(--pri-d)}
+.go:active,.bb.p:active{transform:translateY(4px);box-shadow:0 2px 0 var(--pri-d)}
+/* 上部:メニューへ戻る+文字の切り替え */
+.topRow{width:100%;max-width:980px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mnb{min-height:62px;padding:0 20px;border-radius:16px;border:3px solid var(--line);background:#fff;font-size:22px;font-weight:bold;white-space:nowrap}
+.mnb:active{background:#FFF0E4;border-color:var(--pri)}
+/* 文字の表記(漢字/ひらがな)の切り替え */
+.langRow{width:100%;max-width:980px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.topRow .langRow{width:auto}
+/* 版番号(公開時刻の14桁・日本時間) */
+.ver{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;font-size:14px;color:var(--sub);letter-spacing:.02em;line-height:1.2}
+.dlg .ver{margin-top:14px}
+#menu .ver{padding:8px 4px;touch-action:none}
+/* 新しい版のお知らせ */
+.upd{width:100%;max-width:980px;background:#FFF3C4;border:4px solid #E8B020;border-radius:22px;padding:14px 20px;margin:0 0 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.upd[hidden]{display:none}
+.upd .ut{font-size:24px;font-weight:bold;flex:1 1 280px}
+.upd .ut small{display:block;font-size:16px;font-weight:normal;color:var(--sub);margin-top:2px}
+.upd .bb{min-height:70px;min-width:180px}
+.upd .un{flex:1 1 100%;font-size:17px;color:var(--sub);margin:0}
+/* 管理用の設定 */
+.adm input{width:100%;min-height:64px;font-size:22px;border:3px solid var(--line);border-radius:14px;padding:0 16px;margin:0 0 16px;-webkit-user-select:text;user-select:text;font-family:ui-monospace,Menlo,monospace}
+.adm .admSt{font-size:22px;font-weight:bold;margin:0 0 12px}
+.adm p.admMsg{font-size:19px;min-height:1.4em;margin:12px 0}
+.adm .src{font-size:17px;color:var(--sub);margin:0 0 10px}
+.lang{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:bold}
+.lang .lbl{color:var(--sub);margin-right:4px}
+.lgb{min-height:62px;min-width:124px;padding:0 18px;border-radius:16px;border:3px solid var(--line);background:#fff;font-size:22px;font-weight:bold}
+.lgb.sel{border-color:var(--pri);background:#FFF0E4;color:var(--pri-d)}
+.lgb.sel::before{content:"✓ "}
+.lang.dl{min-height:84px;width:100%;border-radius:20px;border:4px solid var(--line);background:#fff;margin:0 0 14px;padding:8px 14px 8px 26px;font-size:26px;justify-content:space-between}
+.lang.dl .lbl{color:var(--ink)}
+.lang.dl .lgb{min-height:64px}
+/* メニュー画面 */
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;width:100%;max-width:900px;margin-top:30px}
+.game{min-height:270px;background:#fff;border:4px solid var(--line);border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 0 var(--line);padding:16px}
+.game:active{transform:translateY(4px);box-shadow:0 2px 0 var(--line);border-color:var(--pri)}
+.game .em{font-size:96px;line-height:1}
+.game .gt{font-size:40px;font-weight:bold}
+.game .gd{font-size:22px;color:var(--sub)}
+#bar,.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));background:#fff;border-bottom:2px solid var(--line);flex:0 0 auto}
+.tb{min-height:62px;padding:0 18px;border-radius:16px;border:3px solid var(--line);background:#fff;font-size:22px;font-weight:bold;white-space:nowrap}
+.tb.on{background:#FFF0E4;border-color:var(--pri)}
+.sp{flex:1}
+.info{font-size:22px;color:var(--sub);white-space:nowrap;padding:0 6px}
+.info b{color:var(--ink);font-size:30px}
+#area{position:relative;flex:1;overflow:hidden;touch-action:none}
+#board{position:absolute;left:0;top:0;border-radius:4px;box-shadow:0 0 0 5px #E6D3BB,0 8px 20px rgba(0,0,0,.12)}
+.pc{position:absolute;left:0;top:0;will-change:transform;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));transition:opacity 1s}
+.pc.lock{filter:none}
+.pc.drag{filter:drop-shadow(0 12px 12px rgba(0,0,0,.4))}
+.pc.hint{animation:hint .8s ease-in-out 4}
+@keyframes hint{50%{filter:drop-shadow(0 0 16px #FFB300) drop-shadow(0 0 6px #FFB300)}}
+#tray{position:absolute;overscroll-behavior:contain;overflow-x:hidden;overflow-y:auto;touch-action:pan-y;z-index:3;-webkit-overflow-scrolling:touch;background:rgba(234,217,196,.4);border-radius:18px}
+#tray.h{overflow-x:auto;overflow-y:hidden;touch-action:pan-x}
+#trayIn{position:relative}
+#lane{position:absolute;z-index:4;background:#F1E6D8;border-radius:18px;display:flex;align-items:center;gap:8px;padding:6px;touch-action:none}
+#lane.v{flex-direction:column}
+#lane button{flex:0 0 56px;width:56px;height:56px;border-radius:14px;border:3px solid var(--line);background:#fff;font-size:22px;font-weight:bold;padding:0}
+#lane button:active{background:#FFF0E4;border-color:var(--pri)}
+#track{position:relative;flex:1;align-self:stretch;border-radius:12px;background:#E6D3BB;touch-action:none;overflow:hidden}
+#thumb{position:absolute;border-radius:10px;background:var(--pri);opacity:.85;pointer-events:none}
+#mini{position:absolute;z-index:4;border-radius:12px;border:4px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);display:none;cursor:pointer}
+.pc.spin{transition:transform .22s ease,opacity 1s}
+.tg{min-height:84px;width:100%;font-size:26px;font-weight:bold;border-radius:20px;border:4px solid var(--line);background:#fff;margin:0 0 14px;display:flex;justify-content:space-between;align-items:center;padding:0 26px}
+.tg b{color:var(--sub)}
+.tg.on{border-color:var(--pri);background:#FFF0E4}
+.tg.on b{color:var(--pri)}
+@media (max-width:900px){#bar,.bar{gap:8px}#backBtn,#sdBackBtn{margin-right:10px!important}.tb{padding:0 11px;font-size:20px}.info{font-size:19px;padding:0 2px}.info b{font-size:26px}}
+@media (max-width:800px){#bar,.bar{gap:6px;padding-left:10px;padding-right:10px}.tb{padding:0 9px;font-size:19px}.info{font-size:17px}.info b{font-size:24px}}
+/* ひらがな表示は、ことばの切れ目(空白)で改行する */
+.kana .cnt{word-break:keep-all;line-height:1.15;text-align:center}
+.kana .ph,.kana .nm,.kana .lead,.kana .cnt small,.kana .dlg p,.kana .game .gd,.kana .cont small,.kana .catMsg,.kana .upd .ut,.kana .upd .un{word-break:keep-all;overflow-wrap:anywhere}
+@media (max-width:560px){.lang.dl{font-size:22px;padding-left:16px}.lang.dl .lgb{min-width:100px;padding:0 10px;font-size:20px}}
+#target{position:absolute;border:5px dashed #FFA000;border-radius:8px;background:rgba(255,200,0,.22);pointer-events:none;display:none;z-index:5;animation:blink .8s ease-in-out 4}
+@keyframes blink{50%{opacity:.25}}
+.ov{position:fixed;inset:0;background:rgba(40,30,20,.55);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.ov.on{display:flex}
+.dlg{background:#fff;border-radius:28px;padding:30px 34px;text-align:center;max-width:640px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);max-height:100%;overflow-y:auto}
+.dlg h3{font-size:38px;margin:4px 0 10px}
+.dlg p{font-size:24px;margin:8px 0 24px;color:var(--sub)}
+.row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.bb{min-height:82px;min-width:210px;border-radius:41px;border:none;font-size:26px;font-weight:bold;padding:0 26px}
+.bb.p{background:var(--pri);color:#fff;box-shadow:0 5px 0 var(--pri-d)}
+.bb.s{background:#F1E6D8}
+#mihonCv{border-radius:14px;border:6px solid #fff;display:block;margin:0 auto 18px;background:#fff}
+.big{font-size:70px;line-height:1.1}
+
+/* ====== 数独 ====== */
+.cont{width:100%;max-width:980px;min-height:116px;margin-top:22px;border-radius:24px;border:4px solid var(--pri);background:#FFF0E4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 5px 0 var(--pri-d)}
+.cont:active{transform:translateY(4px);box-shadow:0 1px 0 var(--pri-d)}
+.cont .ct{font-size:36px;font-weight:bold;color:var(--pri-d)}
+.cont small{font-size:22px;color:var(--sub)}
+/* ジグソーの「続きから」(絵の小さな画像つき) */
+.cont.jg{flex-direction:row;gap:24px;padding:12px 24px}
+.cont.jg img{width:96px;height:96px;flex:0 0 auto;border-radius:14px;border:4px solid #fff;object-fit:cover;background:#eee}
+.cont.jg .ctx{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left}
+#start h2.new{margin-top:30px;color:var(--sub)}
+#sdArea{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:28px;padding:18px;touch-action:manipulation}
+#sdArea.pt{flex-direction:column;gap:18px}
+#sdBoard{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:5px solid var(--ink);border-radius:6px;background:#fff;flex:0 0 auto;box-shadow:0 8px 20px rgba(0,0,0,.12);box-sizing:content-box}
+.sc{position:relative;border-right:1px solid #C3B2A0;border-bottom:1px solid #C3B2A0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--c) * .62);font-weight:bold;color:#2462A8;background:#fff;line-height:1;touch-action:manipulation}
+.sc.b3r{border-right:4px solid var(--ink)}
+.sc.b3b{border-bottom:4px solid var(--ink)}
+.sc.lc{border-right:none}
+.sc.lr{border-bottom:none}
+.sc.giv{color:var(--ink)}
+.sc.hn{color:#2E8B3E}
+.sc.peer{background:#FFF3E6}
+.sc.same{background:#FFD9A8}
+.sc.wrong{color:#D0201A}
+.sc.wrong:not(.sel){background:#FFDCD6}
+.sc.sel{background:#FFB878;box-shadow:inset 0 0 0 4px var(--pri-d)}
+.sc.flash{animation:sflash .7s ease-in-out 3}
+@keyframes sflash{50%{background:#FFE36A}}
+.mm{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:calc(var(--c) * .26);font-weight:bold;color:#7A6A60}
+.mm span{display:flex;align-items:center;justify-content:center;border-radius:50%}
+.mm span.hl{color:#fff;background:var(--pri)}
+#sdPad{display:flex;flex-direction:column;gap:12px;flex:0 0 auto}
+.nums{display:grid;gap:12px}
+.nb{border-radius:18px;border:4px solid var(--line);background:#fff;font-size:calc(var(--b) * .52);font-weight:bold;color:#2462A8;padding:0;box-shadow:0 4px 0 var(--line)}
+.nb:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line);background:#FFF0E4}
+.nb.full{opacity:.35}
+#sdPad.memo .nb{border-style:dashed;border-color:var(--pri);color:var(--sub);font-size:calc(var(--b) * .38)}
+.tools{display:flex;gap:12px}
+.tools .tb{flex:1;min-height:76px;font-size:24px}
+.tb.off{opacity:.4}
+#sdMemoBtn{margin:0;min-height:76px;padding:0 20px}
+#sdArea.pt #sdPad{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px}
+#sdArea.pt .nums{grid-column:1/-1}
+#sdArea.pt .tools{display:contents}
+.toast{position:fixed;left:50%;top:32%;transform:translateX(-50%);background:rgba(59,47,42,.92);color:#fff;font-size:30px;font-weight:bold;padding:24px 36px;border-radius:24px;z-index:9000;display:none;text-align:center;max-width:90vw;pointer-events:none}
+.toast.on{display:block}
+/* 長押しで出る数字の小窓 */
+#qpBack{position:fixed;inset:0;z-index:8000;background:rgba(40,30,20,.18);display:none;touch-action:none}
+#qp{position:fixed;z-index:8001;background:#fff;border-radius:22px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);border:4px solid var(--pri);display:none;touch-action:manipulation}
+#qp.on,#qpBack.on{display:block}
+.qpT{font-size:20px;font-weight:bold;color:var(--pri-d);text-align:center;margin:-2px 0 8px;display:none}
+#qp.memo .qpT{display:block}
+.qpN{display:grid;gap:8px}
+.qb{border-radius:16px;border:3px solid var(--line);background:#fff;font-size:calc(var(--q) * .55);font-weight:bold;color:#2462A8;padding:0}
+.qb:active{background:#FFF0E4;border-color:var(--pri)}
+.qb.full{opacity:.35}
+#qp.memo .qb{border-style:dashed;border-color:var(--pri);color:var(--sub);font-size:calc(var(--q) * .42)}
+#qp.memo .qb.mon{background:var(--pri);color:#fff;border-style:solid}
+.qpR{display:flex;gap:8px;margin-top:8px}
+.qpR .tb{flex:1;min-height:62px;font-size:22px;padding:0 8px}
+.sc.hold{transition:background .45s;background:#FFE36A}
+/* 数独:記録のある問題 */
+.recs{width:100%;max-width:980px;display:flex;flex-direction:column;gap:12px}
+.recs h3{font-size:22px;color:var(--sub);margin:10px 0 0}
+.rec{display:flex;gap:12px;align-items:stretch}
+.rec .rp{flex:1;min-height:92px;background:#fff;border:4px solid var(--line);border-radius:20px;display:flex;align-items:center;gap:18px;padding:8px 22px;text-align:left}
+.rec .rp:active{background:#FFF0E4;border-color:var(--pri)}
+.rec .rp .lv{font-size:24px;font-weight:bold;min-width:6.5em}
+.rec .rp .bt{display:flex;flex-direction:column;gap:2px}
+.rec .rp .bt b{font-size:26px}
+.rec .rp .bt small{font-size:19px;color:var(--sub)}
+.rec .rp .go2{margin-left:auto;font-size:22px;font-weight:bold;color:var(--pri-d);white-space:nowrap}
+.rec .fv{flex:0 0 100px;border-radius:20px;border:4px solid var(--line);background:#fff;font-size:19px;font-weight:bold;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+.rec .fv .st{font-size:36px;line-height:1}
+.rec .fv.on,.tg.fav.on{border-color:#E8B020;background:#FFF6D6;color:#9A6A00}
+.tg.fav.on b{color:#9A6A00}
+.kana .rec .rp .lv{word-break:keep-all}
+.newrec{font-size:46px;font-weight:bold;color:#D9480F;margin:0 0 4px;animation:pop .7s ease-out}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+.dlg p.recinfo{font-size:22px;margin:-8px 0 16px;color:var(--ink)}
+#sdDoneOv .tg{min-height:72px;font-size:24px}
+#sdRetryBtn{width:100%;min-height:88px;font-size:30px;margin-bottom:16px}
+#sdDoneOv .dlg{padding-top:22px;padding-bottom:22px}
+#sdDoneOv .dlg h3{margin:0 0 4px}
+#sdDoneOv .dlg p{margin:4px 0 16px}
+@media (max-height:860px){#sdDoneOv .newrec{font-size:38px}#sdRetryBtn{min-height:76px;margin-bottom:12px}#sdDoneOv .tg{min-height:66px;margin-bottom:12px}#sdDoneOv .bb{min-height:72px}}
+#sdCat{width:min(260px,55vw,22vh,max(120px,calc(100vh - 660px)));aspect-ratio:1/1;border-radius:20px;border:6px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.2);display:block;margin:0 auto 10px;object-fit:cover}
+</style>
+</head>
+<body>
+
+<section id="menu" class="screen on">
+  <div class="upd" id="updBar" role="status" hidden></div>
+  <div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div><div class="ver" id="menuVer"></div></div>
+  <h1>🐱 ねこの脳トレパズル</h1>
+  <p class="lead" data-t="menuLead">遊びたいパズルを選んでください</p>
+  <div class="games">
+    <button class="game" id="gJigBtn"><span class="em">🧩</span><span class="gt" data-t="gJig">ジグソーパズル</span><span class="gd" data-t="gJigD">絵を組み立てる</span></button>
+    <button class="game" id="gSdBtn"><span class="em">🔢</span><span class="gt" data-t="gSd">数独</span><span class="gd" data-t="gSdD">数字を入れる</span></button>
+  </div>
+</section>
+
+<section id="start" class="screen">
+  <div class="topRow"><button class="mnb" data-t="menu">◀ メニュー</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
+  <h1>🧩 <span data-t="gJig">ジグソーパズル</span></h1>
+  <p class="lead" data-t="lead">好きな絵と、ピースの数を選んでください</p>
+  <button class="cont jg" id="jgCont" style="display:none"></button>
+  <h2 class="new" id="jgHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
+  <h2 data-t="hPic">① 絵を選ぶ</h2>
+  <h3 class="subh" data-t="hCat">ねこの写真</h3>
+  <p class="catMsg" id="catMsg"></p>
+  <div class="pics" id="catPics"></div>
+  <button class="more" id="catMore" data-t="catMore">🔄 ほかの猫を見る</button>
+  <h3 class="subh s2" data-t="hIllust">イラスト・iPadの写真</h3>
+  <div class="pics" id="pics"></div>
+  <h2 data-t="hCnt">② ピースの数</h2>
+  <div class="counts" id="counts"></div>
+  <h2 data-t="hRot">③ ピースの向き</h2>
+  <div class="counts" id="rots"></div>
+  <button class="go" id="goBtn" data-t="go">始める</button>
+</section>
+
+<section id="play" class="screen">
+  <div id="bar">
+    <button class="tb" id="backBtn" style="margin-right:22px" data-t="back">◀ 戻る</button>
+    <button class="tb" id="mihonBtn" data-t="mihon">見本</button>
+    <button class="tb" id="hintBtn" data-t="hint">ヒント</button>
+    <button class="tb" id="edgeBtn" data-t="edge">ふちだけ</button>
+    <button class="tb" id="setBtn" data-t="set">設定</button>
+    <span class="sp"></span>
+    <span class="info"><span data-t="left1">残り</span> <b id="left">0</b> <span data-t="left2">枚</span></span>
+    <span class="info">⏱ <b id="time">0:00</b></span>
+  </div>
+  <div id="area">
+    <canvas id="board"></canvas>
+    <canvas id="mini"></canvas>
+    <div id="tray"><div id="trayIn"></div></div>
+    <div id="lane"><button id="laneUp">▲</button><div id="track"><div id="thumb"></div></div><button id="laneDn">▼</button></div>
+    <div id="target"></div>
+  </div>
+</section>
+
+<section id="sdStart" class="screen">
+  <div class="topRow"><button class="mnb" data-t="menu">◀ メニュー</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
+  <h1>🔢 <span data-t="gSd">数独</span></h1>
+  <p class="lead" data-t="sdLead">難しさを選んで始めてください</p>
+  <button class="cont" id="sdCont"></button>
+  <h2 id="sdHLv"></h2>
+  <div class="counts" id="sdLvs"></div>
+  <button class="go" id="sdGo" data-t="go">始める</button>
+  <h2 id="sdRecH" style="display:none;margin-top:44px" data-t="sdRecH">記録のある問題</h2>
+  <div class="recs" id="sdRecs"></div>
+</section>
+
+<section id="sdPlay" class="screen">
+  <div class="bar">
+    <button class="tb" id="sdBackBtn" style="margin-right:22px" data-t="back">◀ 戻る</button>
+    <button class="tb" id="sdHintBtn" data-t="hint">ヒント</button>
+    <button class="tb" id="sdSetBtn" data-t="set">設定</button>
+    <span class="sp"></span>
+    <span class="info"><span data-t="left1">残り</span> <b id="sdLeft">0</b> <span data-t="sdLeft2">マス</span></span>
+    <span class="info">⏱ <b id="sdTime">0:00</b></span>
+  </div>
+  <div id="sdArea">
+    <div id="sdBoard"></div>
+    <div id="sdPad">
+      <div class="nums" id="sdNums"></div>
+      <button class="tg" id="sdMemoBtn"><span data-t="sdMemo">✏️ メモ</span><b>なし</b></button>
+      <div class="tools">
+        <button class="tb" id="sdEraseBtn" data-t="sdErase">消す</button>
+        <button class="tb" id="sdUndoBtn" data-t="sdUndo">↶ 取り消し</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<div id="qpBack"></div>
+<div id="qp"><div class="qpT" data-t="sdMemo">✏️ メモ</div><div class="qpN" id="qpN"></div><div class="qpR"><button class="tb" id="qpErase" data-t="sdErase">消す</button><button class="tb" id="qpClose" data-t="close">閉じる</button></div></div>
+
+<div class="ov" id="mihonOv"><div class="dlg">
+  <canvas id="mihonCv"></canvas>
+  <button class="bb p" id="mihonClose" data-t="close">閉じる</button>
+</div></div>
+
+<div class="ov" id="setOv"><div class="dlg">
+  <h3 data-t="set">設定</h3>
+  <button class="tg on" id="guideBtn"><span data-t="guide">台に薄く絵を出す</span><b>あり</b></button>
+  <button class="tg on" id="miniBtn"><span data-t="mini">小さい見本を出す</span><b>あり</b></button>
+  <button class="tg on" id="soundBtn"><span data-t="sound">音</span><b>あり</b></button>
+  <div class="lang dl"><span class="lbl" data-t="lang">文字</span><span style="display:flex;gap:10px"><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></span></div>
+  <button class="bb p" id="setClose" data-t="close">閉じる</button>
+  <div class="ver"></div>
+</div></div>
+
+<div class="ov" id="sdSetOv"><div class="dlg">
+  <h3 data-t="set">設定</h3>
+  <button class="tg" id="sdErrBtn"><span data-t="sdErr">間違いを赤く出す</span><b>なし</b></button>
+  <button class="tg on" id="sdSameBtn"><span data-t="sdSame">同じ数字に色を付ける</span><b>あり</b></button>
+  <button class="tg on" id="sdSoundBtn"><span data-t="sound">音</span><b>あり</b></button>
+  <div class="lang dl"><span class="lbl" data-t="lang">文字</span><span style="display:flex;gap:10px"><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></span></div>
+  <button class="bb p" id="sdSetClose" data-t="close">閉じる</button>
+  <div class="ver"></div>
+</div></div>
+
+<div class="ov" id="quitOv"><div class="dlg">
+  <h3 data-t="quitQ">パズルをやめますか?</h3>
+  <p data-t="quitP">やめると、途中の続きは残りません</p>
+  <button class="bb p" id="quitNo" style="width:100%;min-height:96px;font-size:32px" data-t="quitNo">続ける</button>
+  <div style="height:56px"></div>
+  <button class="bb s" id="quitYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="quitYes">やめる</button>
+</div></div>
+
+<div class="ov" id="jgNewOv"><div class="dlg">
+  <h3 data-t="jgNewQ">新しく始めますか?</h3>
+  <p data-t="jgNewP">途中のパズルは消えます</p>
+  <button class="bb p" id="jgNewNo" style="width:100%;min-height:96px;font-size:32px" data-t="sdNewNo">続きを遊ぶ</button>
+  <div style="height:56px"></div>
+  <button class="bb s" id="jgNewYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="sdNewYes">新しく始める</button>
+</div></div>
+
+<div class="ov" id="sdNewOv"><div class="dlg">
+  <h3 data-t="sdNewQ">新しい問題を始めますか?</h3>
+  <p data-t="sdNewP">途中の問題は消えます</p>
+  <button class="bb p" id="sdNewNo" style="width:100%;min-height:96px;font-size:32px" data-t="sdNewNo">続きを遊ぶ</button>
+  <div style="height:56px"></div>
+  <button class="bb s" id="sdNewYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="sdNewYes">新しく始める</button>
+</div></div>
+
+<div class="ov" id="doneOv"><div class="dlg">
+  <div class="big">🎉</div>
+  <h3 data-t="done">完成!</h3>
+  <p id="doneMsg">よくできました</p>
+  <div class="row">
+    <button class="bb s" id="otherBtn" data-t="other">他の絵にする</button>
+    <button class="bb p" id="againBtn" data-t="again">もう一度</button>
+  </div>
+</div></div>
+
+<div class="ov" id="sdDoneOv"><div class="dlg">
+  <img id="sdCat" alt="">
+  <div class="newrec" id="sdNewRec" style="display:none" data-t="sdNewRec">🏆 新記録!</div>
+  <h3>🎉 <span data-t="done">完成!</span></h3>
+  <p id="sdDoneMsg">よくできました</p>
+  <p id="sdRecInfo" class="recinfo"></p>
+  <button class="bb p" id="sdRetryBtn" data-t="sdRetry">同じ問題にもう一度</button>
+  <button class="tg fav" id="sdFavBtn"><span data-t="sdFav">★ この問題を残す</span><b>なし</b></button>
+  <div class="row">
+    <button class="bb s" id="sdOtherBtn" data-t="sdOther">難しさを変える</button>
+    <button class="bb p" id="sdAgainBtn" data-t="sdAgain">もう一問</button>
+  </div>
+</div></div>
+
+<!-- 管理用の設定(メニューの版番号を3秒長押しで開く。ご家族は使わない) -->
+<div class="ov" id="admOv"><div class="dlg adm">
+  <h3 data-t="admH">管理用の設定</h3>
+  <p data-t="admP">The Cat API のキー</p>
+  <div class="admSt" id="admSt"></div>
+  <input id="admKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="100">
+  <div class="row">
+    <button class="bb s" id="admDel" data-t="admDel">キーを消す</button>
+    <button class="bb p" id="admSave" data-t="admSave">保存する</button>
+  </div>
+  <p class="admMsg" id="admMsg"></p>
+  <p class="src" id="admSrc"></p>
+  <button class="bb s" id="admClose" data-t="close">閉じる</button>
+  <div class="ver"></div>
+</div></div>
+
+<script src="app.js?v=20261115065912"></script>
+</body>
+</html>
