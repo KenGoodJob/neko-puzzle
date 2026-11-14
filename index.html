@@ -39,6 +39,11 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .more{margin-top:16px;min-height:76px;min-width:300px;padding:0 28px;border-radius:38px;border:4px solid var(--line);background:#fff;font-size:26px;font-weight:bold;box-shadow:0 4px 0 var(--line)}
 .more:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line);background:#FFF0E4;border-color:var(--pri)}
 .more:disabled{opacity:.45}
+.catQuota{width:100%;max-width:980px;font-size:20px;color:var(--sub);text-align:center;margin:10px 0 0}
+.kana .catQuota{word-break:keep-all;overflow-wrap:anywhere}
+.adm .admLim{display:flex;align-items:center;justify-content:center;gap:14px;font-size:22px;font-weight:bold;margin:0 0 6px}
+.adm .admLim .tb{min-width:64px;font-size:28px}
+.adm .admLim b{min-width:3.5em}
 .credit{width:100%;max-width:980px;font-size:16px;color:var(--sub);text-align:right;margin:8px 0 0}
 .cont.jg img.flip{transform:scaleX(-1)}
 .counts{display:flex;flex-wrap:wrap;gap:14px;width:100%;max-width:980px}
@@ -245,7 +250,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p class="catMsg" id="catMsg"></p>
   <div class="pics" id="catPics"></div>
   <p class="credit" id="catCredit" data-t="catCredit" style="display:none">写真:The Cat API / cataas</p>
-  <button class="more" id="catMore" data-t="catMore">🔄 ほかの猫を見る</button>
+  <button class="more" id="catMore" style="display:none"></button>
+  <p class="catQuota" id="catQuota" style="display:none"></p>
   <h3 class="subh s2" data-t="hIllust">イラスト・iPadの写真</h3>
   <div class="pics" id="pics"></div>
   <h2 data-t="hCnt">② ピースの数</h2>
@@ -400,10 +406,12 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   </div>
   <p class="admMsg" id="admMsg"></p>
   <p class="src" id="admSrc"></p>
+  <div class="admLim"><span data-t="admLim">写真の入れ替え(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
+  <p class="src" id="admUsed"></p>
   <button class="bb s" id="admClose" data-t="close">閉じる</button>
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115072804"></script>
+<script src="app.js?v=20261115075425"></script>
 </body>
 </html>

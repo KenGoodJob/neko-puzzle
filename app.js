@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115072804';
+const APP_VERSION='20261115075425';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -47,7 +47,11 @@ const T={
   // 猫の写真(インターネットから取得)
   hCat:['ねこの写真','ねこの しゃしん'],
   hIllust:['イラスト・iPadの写真','イラスト・iPadの しゃしん'],
-  catMore:['🔄 ほかの猫を見る','🔄 ほかの ねこを みる'],
+  catRep:['🔄 この写真を入れ替える','🔄 この しゃしんを いれかえる'],
+  catRepBusy:['入れ替えています…','いれかえています…'],
+  catRepHelp:['写真を選ぶと、1枚ずつ入れ替えられます','しゃしんを えらぶと、1まいずつ いれかえられます'],
+  catRepDone:['今日の入れ替えはここまでです。明日また入れ替えられます','きょうの いれかえは ここまで です。あした また いれかえられます'],
+  catRepFail:['写真を入れ替えられませんでした','しゃしんを いれかえられませんでした'],
   catWait:['読み込み中…','よみこみちゅう…'],
   catLoading:['猫の写真を読み込んでいます。少しお待ちください','ねこの しゃしんを よみこんでいます。すこし おまちください'],
   catCredit:['写真:The Cat API / cataas','しゃしん:The Cat API / cataas'],
@@ -96,6 +100,8 @@ const T={
   admSaved:['保存しました','ほぞんしました'],admDeleted:['消しました','けしました'],
   admBad:['キーの形式が正しくありません','キーの けいしきが ただしく ありません'],
   admSrc:['前回の写真の取得元','ぜんかいの しゃしんの しゅとくもと'],
+  admLim:['写真の入れ替え(1日)','しゃしんの いれかえ(1にち)'],
+  admUsed:['今日の入れ替え','きょうの いれかえ'],
   admSrcNone:['まだ取得していません','まだ しゅとく していません'],
   admSrcFail:['取得できませんでした(サンプルのみ)','しゅとく できませんでした(サンプルのみ)'],
 };
@@ -258,36 +264,49 @@ function renderPics(){
 }
 
 /* ====== 猫の写真(インターネットから取得) ====== */
-// The Cat API(キーがあるとき)→ cataas → サンプルのイラスト の順に試す。
+// キーがあるときは The Cat API と cataas を半分ずつ混ぜる(ないときは cataas だけ)。どちらもだめならサンプルのイラストで遊ぶ。
 // 返ってきた値は、決めたドメインの https 画像URLだけを使い、他の値は捨てる(画面にも出さない)
+// 表示した6枚は iPad 内(IndexedDB 'cats')に写真ごと保存し、次に開いたときも同じ写真を出す。
+// 入れ替えは選んだ1枚ずつ。1日の上限あり(日本時間の0時で切り替え。管理用の設定で変更可)
 const CAT_N=6,CAT_KEY='neko-catapi-key',CAT_SRC_KEY='neko-cat-src';
+const CAT_LIMIT_KEY='neko-cat-limit',CAT_QUOTA_KEY='neko-cat-quota',CAT_LIMIT_DEF=10,CAT_LIMIT_MAX=50;
 const CAT_KEY_RE=/^[A-Za-z0-9_-]{8,100}$/;
 const TCA_IMG_RE=/^https:\/\/cdn2\.thecatapi\.com\/images\/[A-Za-z0-9_-]{1,40}\.(jpe?g|png)$/i;
 const CATAAS_ID_RE=/^[A-Za-z0-9_-]{6,40}$/;
-let catItems=[],catState='idle',catGen=0; // catState: idle / loading / ok / fail
+const CATAAS_IMG_RE=/^https:\/\/cataas\.com\/cat\/[A-Za-z0-9_-]{6,40}$/;
+let catItems=[],catState='idle',catGen=0,catBusy=-1; // catState: idle / loading / ok / fail、catBusy:入れ替え中の番号
 function catKey(){try{const k=localStorage.getItem(CAT_KEY)||'';return CAT_KEY_RE.test(k)?k:'';}catch(e){return '';}}
+const jstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+function catLimit(){
+  try{const v=localStorage.getItem(CAT_LIMIT_KEY);if(v===null)return CAT_LIMIT_DEF;const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=CAT_LIMIT_MAX?n:CAT_LIMIT_DEF;}catch(e){return CAT_LIMIT_DEF;}
+}
+function catUsed(){
+  try{const o=JSON.parse(localStorage.getItem(CAT_QUOTA_KEY)||'null');return o&&o.d===jstDay()&&Number.isInteger(o.n)&&o.n>=0&&o.n<10000?o.n:0;}catch(e){return 0;}
+}
+function catUse(){try{localStorage.setItem(CAT_QUOTA_KEY,JSON.stringify({d:jstDay(),n:catUsed()+1}));}catch(e){}}
+const catLeft=()=>Math.max(0,catLimit()-catUsed());
 function fetchJson(url,opt,ms){
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),ms);
   return fetch(url,Object.assign({signal:ctl.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',mode:'cors'},opt||{}))
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .finally(()=>clearTimeout(tm));
 }
-async function catFromTheCatApi(){
+async function catFromTheCatApi(n){
   const k=catKey();if(!k)throw new Error('no key');
-  // キーはURLに入れず、x-api-key ヘッダーで送る
-  const a=await fetchJson('https://api.thecatapi.com/v1/images/search?limit=10&mime_types=jpg,png',{headers:{'x-api-key':k}},10000);
+  // キーはURLに入れず、x-api-key ヘッダーで送る(1回の呼び出しで数枚分の候補をもらう)
+  const a=await fetchJson('https://api.thecatapi.com/v1/images/search?limit='+Math.min(10,n+4)+'&mime_types=jpg,png',{headers:{'x-api-key':k}},10000);
   if(!Array.isArray(a))throw new Error('bad');
   return a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean);
 }
-async function catFromCataas(){
-  const rs=await Promise.allSettled(Array.from({length:CAT_N},(_,i)=>fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000)));
+async function catFromCataas(n){
+  const rs=await Promise.allSettled(Array.from({length:n},(_,i)=>fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000)));
   return rs.map(r=>{
     if(r.status!=='fulfilled'||!r.value||typeof r.value!=='object')return '';
     const o=r.value,id=typeof o.id==='string'?o.id:(typeof o._id==='string'?o._id:'');
     return CATAAS_ID_RE.test(id)?'https://cataas.com/cat/'+id:'';
   }).filter(Boolean);
 }
-// 画像の読み込み。まず持ち出し許可(CORS)付きで読み、だめなら普通に読む(その場合は途中保存できない)
+// 画像の読み込み。まず持ち出し許可(CORS)付きで読み、だめなら普通に読む(その場合は写真の保存・途中保存ができない)
 function loadCatImg(url){
   const tryLoad=cors=>new Promise((res,rej)=>{
     const img=new Image();let done=false;
@@ -300,46 +319,130 @@ function loadCatImg(url){
   });
   return tryLoad(true).catch(()=>tryLoad(false));
 }
-async function catLoadFrom(get){
-  const urls=[...new Set(await get())].slice(0,CAT_N);
-  if(!urls.length)throw new Error('empty');
-  const rs=await Promise.allSettled(urls.map(u=>loadCatImg(u).then(img=>({api:true,url:u,img,ready:Promise.resolve(img)}))));
-  const ok=rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
-  if(!ok.length)throw new Error('no image');
-  return ok;
+// 正方形の中央を切り出したJPEG(最大1600px)。切り出せない画像は null
+function catToBlob(img){
+  return new Promise(res=>{try{
+    const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sw=Math.min(iw,ih),o=Math.max(1,Math.min(1600,sw));
+    const cv=document.createElement('canvas');cv.width=o;cv.height=o;
+    const c=cv.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(img,(iw-sw)/2,(ih-sw)/2,sw,sw,0,0,o,o);
+    cv.toBlob(b=>res(b&&b.type==='image/jpeg'?b:null),'image/jpeg',0.88);
+  }catch(e){res(null);}});
 }
-async function fetchCats(){
+async function catMakeItem(src,ou,img){
+  const blob=await catToBlob(img);
+  return {api:true,src,ou,blob,url:ou,img,ready:Promise.resolve(img)};
+}
+// 1つの取得元から n枚取る。skip のURLは除く。取れた分だけ返す(失敗は0枚)
+async function catFetchFrom(src,n,skip){
+  try{
+    const get=src==='thecatapi'?catFromTheCatApi:catFromCataas;
+    const urls=[...new Set(await get(n))].filter(u=>!skip.has(u)).slice(0,n);
+    const rs=await Promise.allSettled(urls.map(u=>loadCatImg(u).then(img=>catMakeItem(src,u,img))));
+    return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  }catch(e){return [];}
+}
+// n枚取る。キーがあるときは The Cat API と cataas を半分ずつ混ぜる(1枚のときは交互)。
+// 片方で足りなければ、もう片方で補う。キーがないときは cataas だけ
+const CAT_NEXT_KEY='neko-cat-next';
+function catNext(){try{return localStorage.getItem(CAT_NEXT_KEY)==='cataas'?'cataas':'thecatapi';}catch(e){return 'thecatapi';}}
+async function catFetch(n,skip){
+  const both=!!catKey(),srcs=both?['thecatapi','cataas']:['cataas'];
+  let plan;
+  if(!both)plan=[['cataas',n]];
+  else if(n===1)plan=[[catNext(),1]];
+  else{const a=Math.ceil(n/2);plan=[['thecatapi',a],['cataas',n-a]];}
+  const rs=await Promise.all(plan.map(([src,k])=>catFetchFrom(src,k,skip)));
+  // 2つの取得元を交互に並べる
+  let out=[];
+  for(let i=0;i<n;i++)rs.forEach(r=>{if(r[i])out.push(r[i]);});
+  if(out.length<n){
+    const used=new Set(skip);out.forEach(o=>used.add(o.ou));
+    for(const src of srcs){
+      if(out.length>=n)break;
+      const more=await catFetchFrom(src,n-out.length,used);
+      more.forEach(o=>used.add(o.ou));out=out.concat(more);
+    }
+  }
+  out=out.slice(0,n);
+  if(n===1&&out.length){try{localStorage.setItem(CAT_NEXT_KEY,out[0].src==='thecatapi'?'cataas':'thecatapi');}catch(e){}}
+  const got=new Set(out.map(o=>o.src));
+  try{localStorage.setItem(CAT_SRC_KEY,!out.length?'fail':got.size>1?'mix':out[0].src);}catch(e){}
+  return out;
+}
+function catSaveAll(){
+  const list=catItems.map(o=>({src:o.src,ou:o.ou,blob:o.blob||null}));
+  jgQueue(()=>idbPut('cats',{v:1,list}));
+}
+// 保存した写真を読む(形式を確かめてから使う)
+async function catLoadSaved(){
+  const o=await jgQueue(()=>idbGet('cats'));
+  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
+  const ok=o.list.slice(0,CAT_N).filter(e=>e&&typeof e==='object'&&typeof e.ou==='string'&&
+    ((e.src==='thecatapi'&&TCA_IMG_RE.test(e.ou))||(e.src==='cataas'&&CATAAS_IMG_RE.test(e.ou)))&&
+    (e.blob===null||(e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6)));
+  const rs=await Promise.allSettled(ok.map(e=>{
+    if(e.blob){const u=URL.createObjectURL(e.blob);return loadImg(u).ready.then(img=>({api:true,src:e.src,ou:e.ou,blob:e.blob,url:u,img,ready:Promise.resolve(img)}));}
+    return loadCatImg(e.ou).then(img=>({api:true,src:e.src,ou:e.ou,blob:null,url:e.ou,img,ready:Promise.resolve(img)}));
+  }));
+  return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
+}
+// 開始画面を初めて開いたとき:保存した写真を出し、6枚に足りなければ足りない分だけ取る(上限には数えない)
+async function initCats(){
   const gen=++catGen;
-  catState='loading';
-  if(selApi>=0)selApi=-1; // 入れ替える間は選択を外す
-  renderCatPics();renderPics();
-  let items=null,src='';
-  if(catKey()){try{items=await catLoadFrom(catFromTheCatApi);src='thecatapi';}catch(e){}}
-  if(!items){try{items=await catLoadFrom(catFromCataas);src='cataas';}catch(e){}}
+  catState='loading';renderCatPics();
+  let items=await catLoadSaved();
   if(gen!==catGen)return;
-  catItems=items||[];catState=items?'ok':'fail';
-  try{localStorage.setItem(CAT_SRC_KEY,items?src:'fail');}catch(e){}
+  if(items.length<CAT_N){
+    const more=await catFetch(CAT_N-items.length,new Set(items.map(o=>o.ou)));
+    if(gen!==catGen)return;
+    items=items.concat(more);
+  }
+  catItems=items;catState=items.length?'ok':'fail';
+  if(items.length)catSaveAll();
+  renderCatPics();renderPics();
+}
+// 選んだ1枚を入れ替える(うまくいったときだけ上限に数える。失敗したら元の写真のまま)
+async function catReplace(){
+  const k=selApi;
+  if(catState!=='ok'||catBusy>=0||k<0||!catItems[k]||catLeft()<=0)return;
+  const gen=catGen;
+  catBusy=k;renderCatPics();
+  const got=await catFetch(1,new Set(catItems.map(o=>o.ou)));
+  if(gen!==catGen)return;
+  catBusy=-1;
+  if(got.length){
+    const old=catItems[k];catItems[k]=got[0];
+    if(old&&old.url.startsWith('blob:'))URL.revokeObjectURL(old.url);
+    catUse();catSaveAll();tone(880,0,.15,.08);
+  }else toast('catRepFail',2600);
   renderCatPics();renderPics();
 }
 function renderCatPics(){
-  const box=$('#catPics'),msg=$('#catMsg'),more=$('#catMore');box.replaceChildren();
+  const box=$('#catPics'),msg=$('#catMsg'),btn=$('#catMore'),q=$('#catQuota');box.replaceChildren();
   msg.classList.toggle('on',catState==='loading'||catState==='fail');
   msg.textContent=catState==='fail'?t('catFail'):catState==='loading'?t('catLoading'):'';
-  more.disabled=catState==='loading';
   $('#catCredit').style.display=catState==='ok'?'':'none';
+  const show=catState==='ok';
+  btn.style.display=show?'':'none';q.style.display=show?'':'none';
   if(catState==='loading'){
     for(let i=0;i<CAT_N;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
     return;
   }
   catItems.forEach((o,k)=>{
+    if(k===catBusy){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);return;}
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     d.appendChild(im);
-    d.onclick=()=>{selApi=k;renderCatPics();renderPics();};
+    d.onclick=()=>{if(catBusy>=0)return;selApi=k;renderCatPics();renderPics();};
     box.appendChild(d);
   });
+  if(!show)return;
+  const left=catLeft();
+  btn.textContent=catBusy>=0?t('catRepBusy'):t('catRep');
+  btn.disabled=catBusy>=0||left<=0||selApi<0;
+  q.textContent=left<=0?t('catRepDone'):(selApi<0?t('catRepHelp')+' ':'')+(kana?'(きょうは あと '+left+'まい)':'(今日はあと'+left+'枚)');
 }
-$('#catMore').onclick=()=>{ensureAudio();if(catState!=='loading')fetchCats();};
+$('#catMore').onclick=()=>{ensureAudio();catReplace();};
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:images[selPic];
 function renderCounts(){
   const box=$('#counts');box.replaceChildren();
@@ -921,7 +1024,7 @@ window.JG_READY=true;
 /* ====== メニュー ====== */
 document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>show('menu');});
 // ジグソーの開始画面を開いたとき、猫の写真をまだ取っていなければ取りに行く
-$('#gJigBtn').onclick=()=>{ensureAudio();show('start');renderJgCont();if(catState==='idle')fetchCats();};
+$('#gJigBtn').onclick=()=>{ensureAudio();show('start');renderJgCont();if(catState==='idle')initCats();};
 $('#gSdBtn').onclick=()=>{ensureAudio();sdRenderStart();show('sdStart');};
 let toastT=null;
 function toast(key,ms){const e=$('#toast');e.textContent=t(key);e.classList.add('on');clearTimeout(toastT);if(ms)toastT=setTimeout(()=>e.classList.remove('on'),ms);}
@@ -1382,11 +1485,21 @@ function admRender(msgKey){
   $('#admSt').textContent=catKey()?t('admSet'):t('admUnset');
   $('#admMsg').textContent=msgKey?t(msgKey):'';
   let src='';try{src=localStorage.getItem(CAT_SRC_KEY)||'';}catch(e){}
-  const nm=src==='thecatapi'?'The Cat API':src==='cataas'?'cataas':src==='fail'?t('admSrcFail'):t('admSrcNone');
+  const nm=src==='mix'?'The Cat API + cataas':src==='thecatapi'?'The Cat API':src==='cataas'?'cataas':src==='fail'?t('admSrcFail'):t('admSrcNone');
   $('#admSrc').textContent=t('admSrc')+':'+nm;
+  $('#admLimV').textContent=kana?catLimit()+'まい':catLimit()+'枚';
+  $('#admUsed').textContent=t('admUsed')+':'+(kana?catUsed()+'まい':catUsed()+'枚');
 }
 function admOpen(){ensureAudio();tone(660,0,.15,.08);$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
-function admAfterChange(){catItems=[];catState='idle';selApi=-1;renderCatPics();renderPics();}
+// キーを変えても保存した写真はそのまま(次の入れ替えから新しいキーで取る)
+function admAfterChange(){renderCatPics();}
+function admSetLimit(d){
+  const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
+  try{localStorage.setItem(CAT_LIMIT_KEY,String(n));}catch(e){}
+  admRender('');renderCatPics();
+}
+$('#admLimDn').onclick=()=>admSetLimit(-1);
+$('#admLimUp').onclick=()=>admSetLimit(1);
 $('#admSave').onclick=()=>{
   const v=String($('#admKey').value||'').trim();
   if(!CAT_KEY_RE.test(v)){admRender('admBad');return;}
