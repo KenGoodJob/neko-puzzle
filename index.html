@@ -475,6 +475,15 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <button class="bb s" id="quitYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="quitYes">やめる</button>
 </div></div>
 
+<!-- 管理用の設定を開く前の確認(ご家族が偶然開かないように) -->
+<div class="ov" id="admAskOv"><div class="dlg">
+  <h3 data-t="admAskQ">管理用の設定を開きますか?</h3>
+  <p data-t="admAskP">ふだんは使いません。「開かない」を押してください</p>
+  <button class="bb p" id="admAskNo" style="width:100%;min-height:96px;font-size:32px" data-t="admAskNo">開かない</button>
+  <div style="height:56px"></div>
+  <button class="bb s" id="admAskYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="admAskYes">開く</button>
+</div></div>
+
 <div class="ov" id="catDelOv"><div class="dlg">
   <h3 data-t="catDelQ">この写真を消しますか?</h3>
   <img id="catDelImg" alt="">
@@ -570,6 +579,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvDraftDel" data-t="apvDraftDel">下書きを消す</button><button class="bb s" id="apvClose" data-t="close">閉じる</button></div>
 </div></div>
 
-<script src="app.js?v=20261115191003"></script>
+<script src="app.js?v=20261115203936"></script>
 </body>
 </html>

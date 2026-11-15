@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115191003';
+const APP_VERSION='20261115203936';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -87,6 +87,9 @@ const T={
   noGiftJg:['途中でやめると、続きは残りません','とちゅうで やめると、つづきは のこりません'],
   lpHint:['絵を長押しして「写真に追加」でも保存できます','えを ながおしして「しゃしんに ついか」でも ほぞん できます'],
   lpOnly:['この写真は、絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります(ごほうびの絵には入りません)','この しゃしんは、えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります(ごほうびの えには はいりません)'],
+  admAskQ:['管理用の設定を開きますか?','かんりようの せっていを ひらきますか?'],
+  admAskP:['ふだんは使いません。「開かない」を押してください','ふだんは つかいません。「ひらかない」を おしてください'],
+  admAskNo:['開かない','ひらかない'],admAskYes:['開く','ひらく'],
   apvNone:['猫の写真は準備中です。下のイラストで遊べます','ねこの しゃしんは じゅんびちゅう です。したの イラストで あそべます'],
   apvAdd:['+ 写真を足す','+ しゃしんを たす'],
   apvAddDone:['今日はここまでです。明日また足せます','きょうは ここまで です。あした また たせます'],
@@ -1885,7 +1888,7 @@ const menuVer=$('#menuVer');
 function admLpCancel(){if(admLp){clearTimeout(admLp.tm);admLp=null;}}
 menuVer.addEventListener('pointerdown',e=>{
   admLpCancel();
-  admLp={id:e.pointerId,x:e.clientX,y:e.clientY,tm:setTimeout(()=>{admLp=null;admOpen();},3000)};
+  admLp={id:e.pointerId,x:e.clientX,y:e.clientY,tm:setTimeout(()=>{admLp=null;admAsk();},3000)};
 });
 menuVer.addEventListener('pointermove',e=>{if(admLp&&e.pointerId===admLp.id&&Math.hypot(e.clientX-admLp.x,e.clientY-admLp.y)>12)admLpCancel();});
 menuVer.addEventListener('pointerup',admLpCancel);
@@ -1904,7 +1907,12 @@ function admRender(msgKey){
     +' ・ '+(kana?'ごほうび '+albItems.length+'まい':'ごほうび'+albItems.length+'枚')+(apvNoSave?(kana?'・しゃしんは ほぞん していません':'・写真は保存していません'):'');
   setTg($('#admTest'),testOn());
 }
-function admOpen(){ensureAudio();tone(660,0,.15,.08);$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
+// 長押しのあと、確認してから開く(「開かない」を大きく、「開く」は下に離して小さく。外側タップは閉じる)
+function admAsk(){ensureAudio();tone(660,0,.15,.08);$('#admAskOv').classList.add('on');}
+$('#admAskOv').onclick=e=>{if(e.target.id==='admAskOv')$('#admAskOv').classList.remove('on');};
+$('#admAskNo').onclick=()=>$('#admAskOv').classList.remove('on');
+$('#admAskYes').onclick=()=>{$('#admAskOv').classList.remove('on');admOpen();};
+function admOpen(){$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
 function admAfterChange(){renderCatPics();}
 function admSetLimit(d){
   const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
