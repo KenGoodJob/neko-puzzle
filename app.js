@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115203936';
+const APP_VERSION='20261115210957';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -111,6 +111,7 @@ const T={
   apvCopyNg:['コピーできませんでした。下の欄を長押しして全部を選び、コピーしてください','コピー できませんでした。したの らんを ながおしして ぜんぶを えらび、コピー してください'],
   apvDraftDel:['下書きを消す','したがきを けす'],
   apvRm:['外す','はずす'],apvOk:['許可','きょか'],
+  qH:['画質','がしつ'],q0:['よい','よい'],q1:['ふつう','ふつう'],q2:['あらめ','あらめ'],
   apvNoChange:['変更はありません','へんこうは ありません'],
   testFill:['🛠 答えを埋める(テスト用)','🛠 こたえを うめる(テストよう)'],
   testJg:['🛠 全部はめる(テスト用)','🛠 ぜんぶ はめる(テストよう)'],
@@ -402,6 +403,29 @@ async function bytesToJpeg(buf,type){
   const u=URL.createObjectURL(new Blob([buf],{type}));
   try{return await catToBlob(await loadCatImg(u));}finally{URL.revokeObjectURL(u);}
 }
+/* ====== 画質の目安(写真の短い辺の大きさ。よい 1200px〜/ふつう 800px〜/あらめ 〜799px) ====== */
+// 保存した写真は最大1600pxなので、1600px のときは「1600px以上」と出す(raw:元の写真のまま=管理用の候補)
+const Q_CAP=1600;
+const qLv=px=>px>=1200?0:px>=800?1:2;
+function qText(px,raw,short){
+  const sz=!raw&&px>=Q_CAP?(kana?Q_CAP+'px いじょう':Q_CAP+'px以上'):px+'px';
+  return short?t('q'+qLv(px))+' '+px:t('qH')+':'+t('q'+qLv(px))+'('+sz+')';
+}
+function qPaint(el){
+  const px=Number(el.dataset.px);if(!(px>0)){el.style.display='none';return;}
+  el.classList.remove('q0','q1','q2');el.classList.add('q'+qLv(px));
+  el.textContent=qText(px,el.dataset.raw==='1',el.dataset.short==='1');el.style.display='';
+}
+// img が読めたら el に画質を出す。on=false(イラストなど)は出さない。同じ img に付け直しても重ならない
+function qBind(img,el,on,raw,short){
+  if(img._qf)img.removeEventListener('load',img._qf);img._qf=null;
+  delete el.dataset.px;el.style.display='none';if(!on)return;
+  el.dataset.raw=raw?'1':'';el.dataset.short=short?'1':'';
+  const f=()=>{const w=img.naturalWidth,h=img.naturalHeight;if(w&&h){el.dataset.px=String(Math.min(w,h));qPaint(el);}};
+  img._qf=f;img.addEventListener('load',f);if(img.complete&&img.naturalWidth)f();
+}
+// 表記の切り替えで描き直す
+function qRefresh(){document.querySelectorAll('[data-px]').forEach(qPaint);}
 // 消した写真(不適切な画像など)のアドレス。二度と出さない
 const CAT_NG_KEY='neko-cat-ng',CAT_NG_MAX=300;
 function catNg(){try{const a=JSON.parse(localStorage.getItem(CAT_NG_KEY)||'[]');return Array.isArray(a)?a.filter(catOkUrl).slice(-CAT_NG_MAX):[];}catch(e){return [];}}
@@ -565,8 +589,9 @@ function renderCatPics(){
   catItems.slice(0,lim).forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
-    d.append(im,mk('span','pno',String(o.no)));
-    if(nw.has(o.no))d.appendChild(mk('span','pnew','NEW'));
+    const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',String(o.no)));
+    if(nw.has(o.no))pw.appendChild(mk('span','pnew','NEW'));
+    d.append(pw,q);qBind(im,q,true);
     d.onclick=()=>{selApi=k;selAlb=-1;const s=apvNew();if(s.delete(o.no))apvNewSave(s);renderAllPics();};
     box.appendChild(d);
   });
@@ -631,11 +656,12 @@ function sharePic(file){
 // 完成画面の保存ボタン:作れたら押せる、作れなければ隠す
 // 完成画面には遊んだ絵を元の向きで出す。長押し →「写真に追加」でも保存できるよう、作ったJPEGに差し替える
 // (写真そのものを作れない猫の写真は、取得元の写真のまま出す。長押しでの保存はできる)
-const doneFiles={},doneUrls={},DONE_PIC={'#doneSave':['#doneImg','#doneLp'],'#sdSave':['#sdCat','#sdLp']};
+const doneFiles={},doneUrls={},DONE_PIC={'#doneSave':['#doneImg','#doneLp','#doneQ'],'#sdSave':['#sdCat','#sdLp','#sdQ']};
 function donePrep(item,sel){
   const b=$(sel),g=$(sel+'G'),im=$(DONE_PIC[sel][0]),lp=$(DONE_PIC[sel][1]),tok={};
   doneFiles[sel]=tok;b.disabled=true;b.style.display='';g.style.display='';
   if(doneUrls[sel]){URL.revokeObjectURL(doneUrls[sel]);doneUrls[sel]=null;}
+  qBind(im,$(DONE_PIC[sel][2]),!!item&&!item.nm);
   im.src=safeImgUrl(item?item.url:images[0].url);
   lp.className='lphint';lp.dataset.k='lpHint';lp.textContent=t('lpHint');
   picFile(item).then(f=>{
@@ -656,6 +682,7 @@ let zoomTok=null,zoomFile=null,zoomUrl=null;
 function zoomOpen(item){
   if(!item)return;
   const tok={};zoomTok=tok;zoomFile=null;
+  qBind($('#zoomImg'),$('#zoomQ'),!item.nm);
   $('#zoomImg').src=safeImgUrl(item.url);$('#zoomSave').disabled=true;$('#zoomOv').classList.add('on');
   picFile(item).then(f=>{
     if(zoomTok!==tok)return;
@@ -723,7 +750,8 @@ function renderAlb(){
   $('#albMsg').style.display=albItems.length?'none':'';
   albItems.forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selAlb===k?' sel':'');
-    const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);d.appendChild(im);
+    const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
+    const q=mk('div','qt');d.append(im,q);qBind(im,q,true);
     d.onclick=()=>{selAlb=k;selApi=-1;renderAllPics();};
     box.appendChild(d);
   });
@@ -773,6 +801,7 @@ function applyLang(){
   if(window.SD_READY)sdApplyLang();
   if(window.JG_READY)renderJgCont();
   if(window.UPD_READY)renderUpd();
+  qRefresh();
 }
 function setLang(v){
   kana=v===1?1:0;
@@ -1979,7 +2008,8 @@ function apvAutoRm(d){
 }
 function apvTile(src,label,on,badge,onTap){
   const b=document.createElement('button');b.className='pic apvT'+(on?' on':'');
-  const im=mk('img');im.alt='';im.src=safeImgUrl(src);b.appendChild(im);
+  const im=mk('img');im.alt='';im.src=safeImgUrl(src);
+  const q=mk('div','qt');b.append(im,q);qBind(im,q,true,true,true);
   if(label)b.appendChild(mk('span','pno',label));
   if(on)b.appendChild(mk('span','apvB',badge));
   b.onclick=onTap;return b;

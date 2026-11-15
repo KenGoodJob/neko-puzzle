@@ -38,6 +38,20 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .kana .zhint{word-break:keep-all;overflow-wrap:anywhere}
 /* 長押しで「写真に追加」できるように */
 #zoomImg,#sdCat,#doneImg{-webkit-touch-callout:default;pointer-events:auto}
+/* 画質の目安(よい/ふつう/あらめ) */
+.pic .qt{font-size:16px;font-weight:bold;padding:6px 0 0;line-height:1.25}
+.kana .pic .qt{word-break:keep-all;overflow-wrap:anywhere}
+.qt.q0{color:#2E7D32}.qt.q1{color:#8A5A00}.qt.q2{color:#B23A2A}
+.qw{position:relative;display:table;margin:0 auto 6px}
+.qw>img{margin:0!important}
+#zoomQw{margin:0}
+#sdQw{margin-bottom:10px}
+#doneQ,#sdQ{font-size:14px;padding:2px 8px;right:8px;bottom:8px}
+.pim{position:relative}
+.pim .pno{left:4px;top:4px}
+.pim .pnew{left:4px;bottom:4px}
+.qbg{position:absolute;right:10px;bottom:10px;padding:3px 10px;border-radius:12px;color:#fff;font-size:16px;font-weight:bold;pointer-events:none;white-space:nowrap}
+.qbg.q0{background:rgba(46,125,50,.92)}.qbg.q1{background:rgba(176,110,0,.94)}.qbg.q2{background:rgba(178,58,42,.92)}
 /* 遊ぶ前の案内:ごほうびの絵に入らない写真 */
 .noGift{width:100%;max-width:980px;margin:12px 0 0;font-size:21px;line-height:1.45;color:#7A4A00;background:#FFF6D6;border:3px solid #E8C860;border-radius:16px;padding:10px 16px}
 .kana .noGift{word-break:keep-all;overflow-wrap:anywhere}
@@ -55,7 +69,7 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .dlg p.lphint.only{color:#7A4A00;background:#FFF6D6;border-radius:14px;padding:6px 10px;font-weight:bold}
 .kana .dlg p.lphint{word-break:keep-all;overflow-wrap:anywhere}
 #doneOv .dlg p.lphint,#sdDoneOv .dlg p.lphint{margin:0 0 4px}
-@media (max-height:860px){.dlg p.lphint{font-size:16px}#sdDoneOv .dlg p.lphint{font-size:15px;margin-bottom:2px}#sdCat{margin-bottom:4px}#sdDoneOv .dlg p{margin-bottom:12px}}
+@media (max-height:860px){.dlg p.lphint{font-size:16px}#sdDoneOv .dlg p.lphint{font-size:15px;margin-bottom:2px}#sdQw{margin-bottom:4px}#sdDoneOv #sdCat{width:min(260px,55vw,22vh,max(100px,calc(100vh - 710px)))}#sdDoneOv .dlg p{margin-bottom:12px}}
 .bb.sv{margin-top:18px;min-height:64px;font-size:22px;min-width:300px}
 .dlg p.sguide{font-size:18px;margin:8px 0 0;color:var(--sub)}
 .kana .dlg p.sguide{word-break:keep-all;overflow-wrap:anywhere}
@@ -126,6 +140,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .apvT img{border-radius:10px}
 .apvT .pno{left:8px;top:8px;font-size:14px;min-width:26px;padding:1px 6px}
 .apvT.on{border-color:var(--pri)}
+.apvT .qt{font-size:13px;padding:3px 0 0;white-space:nowrap}
+.apvT .apvB{bottom:24px!important;border-radius:0!important}
 .apvT .apvB{position:absolute;inset:auto 4px 4px 4px;background:rgba(224,113,58,.92);color:#fff;font-size:16px;font-weight:bold;border-radius:0 0 10px 10px;text-align:center;padding:2px 0;pointer-events:none}
 .apvSum{font-size:18px;font-weight:bold;margin:14px 0 6px}
 .apvSum.ng{color:#C0301A}
@@ -315,7 +331,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 #sdDoneOv .dlg h3{margin:0 0 4px}
 #sdDoneOv .dlg p{margin:4px 0 16px}
 @media (max-height:860px){#sdDoneOv .newrec{font-size:38px}#sdRetryBtn{min-height:76px;margin-bottom:12px}#sdDoneOv .tg{min-height:66px;margin-bottom:12px}#sdDoneOv .bb{min-height:72px}}
-#sdCat{width:min(260px,55vw,22vh,max(120px,calc(100vh - 660px)));aspect-ratio:1/1;border-radius:20px;border:6px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.2);display:block;margin:0 auto 10px;object-fit:cover}
+#sdCat{width:min(260px,55vw,22vh,max(120px,calc(100vh - 690px)));aspect-ratio:1/1;border-radius:20px;border:6px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.2);display:block;margin:0 auto 10px;object-fit:cover}
 </style>
 </head>
 <body>
@@ -432,7 +448,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <div id="qp"><div class="qpT" data-t="sdMemo">✏️ メモ</div><div class="qpN" id="qpN"></div><div class="qpR"><button class="tb" id="qpErase" data-t="sdErase">消す</button><button class="tb" id="qpClose" data-t="close">閉じる</button></div></div>
 
 <div class="ov zoom" id="zoomOv"><div class="zbox">
-  <img id="zoomImg" alt="">
+  <span class="qw" id="zoomQw"><img id="zoomImg" alt=""><span class="qbg" id="zoomQ"></span></span>
   <div class="row">
     <button class="bb s" id="zoomSave" data-t="savePic">📥 iPadに保存</button>
     <button class="bb p" id="zoomClose" data-t="close">閉じる</button>
@@ -510,7 +526,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 </div></div>
 
 <div class="ov" id="doneOv"><div class="dlg">
-  <img id="doneImg" alt="">
+  <span class="qw" id="doneQw"><img id="doneImg" alt=""><span class="qbg" id="doneQ"></span></span>
   <p class="lphint" id="doneLp"></p>
   <h3>🎉 <span data-t="done">完成!</span></h3>
   <p id="doneMsg">よくできました</p>
@@ -524,7 +540,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 </div></div>
 
 <div class="ov" id="sdDoneOv"><div class="dlg">
-  <img id="sdCat" alt="">
+  <span class="qw" id="sdQw"><img id="sdCat" alt=""><span class="qbg" id="sdQ"></span></span>
   <p class="lphint" id="sdLp"></p>
   <div class="newrec" id="sdNewRec" style="display:none" data-t="sdNewRec">🏆 新記録!</div>
   <h3>🎉 <span data-t="done">完成!</span></h3>
@@ -579,6 +595,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvDraftDel" data-t="apvDraftDel">下書きを消す</button><button class="bb s" id="apvClose" data-t="close">閉じる</button></div>
 </div></div>
 
-<script src="app.js?v=20261115203936"></script>
+<script src="app.js?v=20261115210957"></script>
 </body>
 </html>
