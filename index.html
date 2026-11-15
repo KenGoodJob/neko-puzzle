@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://cdn2.thecatapi.com https://cataas.com; connect-src 'self' https://api.thecatapi.com https://cataas.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://cdn2.thecatapi.com https://cataas.com; connect-src 'self' https://api.thecatapi.com https://cdn2.thecatapi.com https://cataas.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ねこパズル">
@@ -107,6 +107,33 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .adm .admLim{display:flex;align-items:center;justify-content:center;gap:14px;font-size:22px;font-weight:bold;margin:0 0 6px}
 .adm .admLim .tb{min-width:64px;font-size:28px}
 .adm .admLim b{min-width:3.5em}
+/* 猫の写真の番号・NEW */
+.pic .pno{position:absolute;left:12px;top:12px;min-width:34px;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,.92);color:var(--ink);font-size:17px;font-weight:bold;font-variant-numeric:tabular-nums;text-align:center;pointer-events:none}
+.pic .pnew{position:absolute;left:12px;bottom:12px;padding:2px 10px;border-radius:12px;background:#D9480F;color:#fff;font-size:16px;font-weight:bold;pointer-events:none}
+.more.fold{min-width:320px}
+.adm .admApv{width:100%;margin:6px 0 10px}
+.adm .tg{min-height:70px;font-size:22px;margin-top:8px}
+.dlg .tg.test{min-height:70px;font-size:22px;border-style:dashed}
+/* 許可リストの管理 */
+#apvOv{align-items:flex-start;padding:10px}
+.dlg.apv{max-width:900px;padding:18px 16px;text-align:left}
+.dlg.apv h3{text-align:center;font-size:30px}
+.dlg.apv h4{font-size:20px;margin:16px 0 8px}
+.dlg.apv .bb{min-width:0;width:100%;min-height:64px;font-size:22px;margin:4px 0}
+.dlg.apv .row .bb{flex:1;width:auto}
+.apvGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.apvT{padding:4px;border-width:3px;border-radius:14px}
+.apvT img{border-radius:10px}
+.apvT .pno{left:8px;top:8px;font-size:14px;min-width:26px;padding:1px 6px}
+.apvT.on{border-color:var(--pri)}
+.apvT .apvB{position:absolute;inset:auto 4px 4px 4px;background:rgba(224,113,58,.92);color:#fff;font-size:16px;font-weight:bold;border-radius:0 0 10px 10px;text-align:center;padding:2px 0;pointer-events:none}
+.apvSum{font-size:18px;font-weight:bold;margin:14px 0 6px}
+.apvSum.ng{color:#C0301A}
+.dlg.apv p{font-size:17px;margin:4px 0 8px;color:var(--sub)}
+.dlg.apv p.apvSum{font-size:18px;font-weight:bold;margin:14px 0 6px;color:var(--ink)}
+.dlg.apv p.apvSum.ng{color:#C0301A}
+@media (max-width:560px){.dlg.adm{padding:20px 16px}.dlg.adm h3{font-size:30px}.adm .admLim{flex-wrap:wrap;gap:10px}.adm .admLim>span{flex:1 1 100%;text-align:center}.adm .bb{min-width:0;width:100%}.adm .row{flex-direction:column;gap:10px}}
+#apvOut{width:100%;height:120px;font-size:12px;font-family:ui-monospace,Menlo,monospace;margin-top:6px;-webkit-user-select:text;user-select:text}
 .credit{width:100%;max-width:980px;font-size:16px;color:var(--sub);text-align:right;margin:8px 0 0}
 .cont.jg img.flip{transform:scaleX(-1)}
 .counts{display:flex;flex-wrap:wrap;gap:14px;width:100%;max-width:980px}
@@ -306,6 +333,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <h3 class="subh" data-t="hCat">ねこの写真</h3>
   <p class="catMsg" id="catMsg"></p>
   <div class="pics" id="catPics"></div>
+  <div class="catBtns"><button class="more fold" id="catFold" style="display:none"></button></div>
   <p class="credit" id="catCredit" data-t="catCredit" style="display:none">写真:The Cat API / cataas</p>
   <div class="catBtns" id="catBtns" style="display:none">
     <button class="more" id="catMore"></button>
@@ -423,6 +451,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <button class="tg on" id="miniBtn"><span data-t="mini">小さい見本を出す</span><b>あり</b></button>
   <button class="tg on" id="soundBtn"><span data-t="sound">音</span><b>あり</b></button>
   <div class="lang dl"><span class="lbl" data-t="lang">文字</span><span style="display:flex;gap:10px"><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></span></div>
+  <button class="tg test" id="jgTestFill" style="display:none" data-t="testJg">🛠 全部はめる(テスト用)</button>
   <button class="bb p" id="setClose" data-t="close">閉じる</button>
   <div class="ver"></div>
 </div></div>
@@ -433,6 +462,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <button class="tg on" id="sdSameBtn"><span data-t="sdSame">同じ数字に色を付ける</span><b>あり</b></button>
   <button class="tg on" id="sdSoundBtn"><span data-t="sound">音</span><b>あり</b></button>
   <div class="lang dl"><span class="lbl" data-t="lang">文字</span><span style="display:flex;gap:10px"><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></span></div>
+  <button class="tg test" id="sdTestFill" style="display:none" data-t="testFill">🛠 答えを埋める(テスト用)</button>
   <button class="bb p" id="sdSetClose" data-t="close">閉じる</button>
   <div class="ver"></div>
 </div></div>
@@ -513,14 +543,33 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb p" id="admSave" data-t="admSave">保存する</button>
   </div>
   <p class="admMsg" id="admMsg"></p>
+  <button class="bb p admApv" id="admApv" data-t="admApvBtn">📋 許可リストの管理</button>
   <p class="src" id="admSrc"></p>
-  <div class="admLim"><span data-t="admLim">写真の入れ替え(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
-  <p class="src" id="admUsed"></p>
+  <div class="admLim"><span data-t="admLim">写真を足す(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
+  <div class="admLim"><span class="src" id="admUsed"></span><button class="tb" id="admReset" data-t="admReset">0に戻す</button></div>
+  <button class="tg" id="admTest"><span data-t="admTest">テスト用のボタン</span><b>なし</b></button>
   <p class="src" id="admDb"></p>
   <button class="bb s" id="admClose" data-t="close">閉じる</button>
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115164951"></script>
+<!-- 許可リストの管理(管理者のiPhoneで使う) -->
+<div class="ov" id="apvOv"><div class="dlg apv">
+  <h3 data-t="apvH">許可リストの管理</h3>
+  <p class="src" id="apvSt"></p>
+  <h4 data-t="apvCurH">公開中の写真(タップで「外す」)</h4>
+  <div class="apvGrid" id="apvCur"></div>
+  <h4 data-t="apvCandH">候補(タップで「許可」)</h4>
+  <button class="bb s" id="apvFind" data-t="apvFind">🔍 候補を探す</button>
+  <p class="src" id="apvFindMsg"></p>
+  <div class="apvGrid" id="apvCand"></div>
+  <p class="apvSum" id="apvSum"></p>
+  <button class="bb p" id="apvCopy" data-t="apvCopy">📋 一覧をコピー</button>
+  <p class="src" id="apvCopyMsg"></p>
+  <textarea id="apvOut" readonly style="display:none"></textarea>
+  <div class="row"><button class="bb s" id="apvDraftDel" data-t="apvDraftDel">下書きを消す</button><button class="bb s" id="apvClose" data-t="close">閉じる</button></div>
+</div></div>
+
+<script src="app.js?v=20261115191003"></script>
 </body>
 </html>
