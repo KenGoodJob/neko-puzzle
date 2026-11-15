@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115075425';
+const APP_VERSION='20261115144709';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -49,7 +49,16 @@ const T={
   hIllust:['イラスト・iPadの写真','イラスト・iPadの しゃしん'],
   catRep:['🔄 この写真を入れ替える','🔄 この しゃしんを いれかえる'],
   catRepBusy:['入れ替えています…','いれかえています…'],
-  catRepHelp:['写真を選ぶと、1枚ずつ入れ替えられます','しゃしんを えらぶと、1まいずつ いれかえられます'],
+  catRepHelp:['写真を選ぶと、入れ替えたり消したりできます','しゃしんを えらぶと、いれかえたり けしたり できます'],
+  catDel:['🗑 この写真を消す','🗑 この しゃしんを けす'],
+  catDelQ:['この写真を消しますか?','この しゃしんを けしますか?'],
+  catDelP:['消した写真は、もう出てきません','けした しゃしんは、もう でてきません'],
+  catDelNo:['消さない','けさない'],
+  catDelYes:['消す','けす'],
+  catDelDone:['写真を消しました','しゃしんを けしました'],
+  catAdd:['写真を足す','しゃしんを たす'],
+  catEmpty:['空き','あき'],
+  catAddFail:['写真を足せませんでした','しゃしんを たせませんでした'],
   catRepDone:['今日の入れ替えはここまでです。明日また入れ替えられます','きょうの いれかえは ここまで です。あした また いれかえられます'],
   catRepFail:['写真を入れ替えられませんでした','しゃしんを いれかえられませんでした'],
   catWait:['読み込み中…','よみこみちゅう…'],
@@ -341,59 +350,82 @@ async function catFetchFrom(src,n,skip){
     return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
   }catch(e){return [];}
 }
-// n枚取る。キーがあるときは The Cat API と cataas を半分ずつ混ぜる(1枚のときは交互)。
-// 片方で足りなければ、もう片方で補う。キーがないときは cataas だけ
+// 取得元の割り当て。キーがあるときは、6枚の中で The Cat API と cataas ができるだけ3枚ずつになるように選ぶ
+// (items:今ある写真。null は空き枠・入れ替える枠。同じ数のときは交互)。キーがないときは cataas だけ
 const CAT_NEXT_KEY='neko-cat-next';
 function catNext(){try{return localStorage.getItem(CAT_NEXT_KEY)==='cataas'?'cataas':'thecatapi';}catch(e){return 'thecatapi';}}
-async function catFetch(n,skip){
+const catOther=s=>s==='thecatapi'?'cataas':'thecatapi';
+function catPlan(n,items){
+  if(!catKey())return [['cataas',n]];
+  const c={thecatapi:0,cataas:0};(items||[]).forEach(o=>{if(o&&c[o.src]!=null)c[o.src]++;});
+  let nx=catNext();
+  for(let i=0;i<n;i++){
+    const s=c.thecatapi<c.cataas?'thecatapi':c.cataas<c.thecatapi?'cataas':nx;
+    if(c.thecatapi===c.cataas)nx=catOther(nx);
+    c[s]++;
+  }
+  const base={thecatapi:0,cataas:0};(items||[]).forEach(o=>{if(o&&base[o.src]!=null)base[o.src]++;});
+  return [['thecatapi',c.thecatapi-base.thecatapi],['cataas',c.cataas-base.cataas]].filter(x=>x[1]>0);
+}
+// 消した写真(不適切な画像など)のアドレス。二度と出さないように、取得のときに除く
+const CAT_NG_KEY='neko-cat-ng',CAT_NG_MAX=300;
+const catOkUrl=u=>typeof u==='string'&&(TCA_IMG_RE.test(u)||CATAAS_IMG_RE.test(u));
+function catNg(){try{const a=JSON.parse(localStorage.getItem(CAT_NG_KEY)||'[]');return Array.isArray(a)?a.filter(catOkUrl).slice(-CAT_NG_MAX):[];}catch(e){return [];}}
+function catNgAdd(u){if(!catOkUrl(u))return;const a=catNg().filter(x=>x!==u);a.push(u);try{localStorage.setItem(CAT_NG_KEY,JSON.stringify(a.slice(-CAT_NG_MAX)));}catch(e){}}
+// n枚取る。片方の取得元で足りなければ、もう片方で補う
+async function catFetch(n,skip,items){
   const both=!!catKey(),srcs=both?['thecatapi','cataas']:['cataas'];
-  let plan;
-  if(!both)plan=[['cataas',n]];
-  else if(n===1)plan=[[catNext(),1]];
-  else{const a=Math.ceil(n/2);plan=[['thecatapi',a],['cataas',n-a]];}
+  skip=new Set(skip);catNg().forEach(u=>skip.add(u));
+  const plan=catPlan(n,items);
   const rs=await Promise.all(plan.map(([src,k])=>catFetchFrom(src,k,skip)));
   // 2つの取得元を交互に並べる
   let out=[];
   for(let i=0;i<n;i++)rs.forEach(r=>{if(r[i])out.push(r[i]);});
   if(out.length<n){
     const used=new Set(skip);out.forEach(o=>used.add(o.ou));
-    for(const src of srcs){
+    // 足りない分は、取れなかった取得元とは別の取得元から先に試す
+    const order=srcs.slice().sort((a,b)=>(plan.some(p=>p[0]===a)?1:0)-(plan.some(p=>p[0]===b)?1:0));
+    for(const src of order){
       if(out.length>=n)break;
       const more=await catFetchFrom(src,n-out.length,used);
       more.forEach(o=>used.add(o.ou));out=out.concat(more);
     }
   }
   out=out.slice(0,n);
-  if(n===1&&out.length){try{localStorage.setItem(CAT_NEXT_KEY,out[0].src==='thecatapi'?'cataas':'thecatapi');}catch(e){}}
+  if(out.length){try{localStorage.setItem(CAT_NEXT_KEY,catOther(out[out.length-1].src));}catch(e){}}
   const got=new Set(out.map(o=>o.src));
   try{localStorage.setItem(CAT_SRC_KEY,!out.length?'fail':got.size>1?'mix':out[0].src);}catch(e){}
   return out;
 }
+// catItems の null は空き枠(消した所)。保存にも {empty:true} として残し、次に開いても空きのまま
 function catSaveAll(){
-  const list=catItems.map(o=>({src:o.src,ou:o.ou,blob:o.blob||null}));
-  jgQueue(()=>idbPut('cats',{v:1,list}));
+  const list=catItems.map(o=>o?{src:o.src,ou:o.ou,blob:o.blob||null}:{empty:true});
+  jgQueue(()=>idbPut('cats',{v:2,list}));
 }
-// 保存した写真を読む(形式を確かめてから使う)
+// 保存した写真を読む(形式を確かめてから使う)。並び順と空き枠はそのまま
 async function catLoadSaved(){
   const o=await jgQueue(()=>idbGet('cats'));
-  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
-  const ok=o.list.slice(0,CAT_N).filter(e=>e&&typeof e==='object'&&typeof e.ou==='string'&&
+  if(!o||typeof o!=='object'||(o.v!==1&&o.v!==2)||!Array.isArray(o.list))return [];
+  const ng=new Set(catNg());
+  const ok=o.list.slice(0,CAT_N).filter(e=>e&&typeof e==='object'&&(e.empty===true||(typeof e.ou==='string'&&!ng.has(e.ou)&&
     ((e.src==='thecatapi'&&TCA_IMG_RE.test(e.ou))||(e.src==='cataas'&&CATAAS_IMG_RE.test(e.ou)))&&
-    (e.blob===null||(e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6)));
+    (e.blob===null||(e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6)))));
   const rs=await Promise.allSettled(ok.map(e=>{
+    if(e.empty===true)return Promise.resolve(null);
     if(e.blob){const u=URL.createObjectURL(e.blob);return loadImg(u).ready.then(img=>({api:true,src:e.src,ou:e.ou,blob:e.blob,url:u,img,ready:Promise.resolve(img)}));}
     return loadCatImg(e.ou).then(img=>({api:true,src:e.src,ou:e.ou,blob:null,url:e.ou,img,ready:Promise.resolve(img)}));
   }));
   return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
 }
-// 開始画面を初めて開いたとき:保存した写真を出し、6枚に足りなければ足りない分だけ取る(上限には数えない)
+const catUrls=()=>new Set(catItems.filter(Boolean).map(o=>o.ou));
+// 開始画面を初めて開いたとき:保存した写真を出し、6枚に足りなければ足りない分だけ取る(上限には数えない。消した空き枠は除く)
 async function initCats(){
   const gen=++catGen;
   catState='loading';renderCatPics();
   let items=await catLoadSaved();
   if(gen!==catGen)return;
   if(items.length<CAT_N){
-    const more=await catFetch(CAT_N-items.length,new Set(items.map(o=>o.ou)));
+    const more=await catFetch(CAT_N-items.length,new Set(items.filter(Boolean).map(o=>o.ou)),items);
     if(gen!==catGen)return;
     items=items.concat(more);
   }
@@ -401,35 +433,70 @@ async function initCats(){
   if(items.length)catSaveAll();
   renderCatPics();renderPics();
 }
-// 選んだ1枚を入れ替える(うまくいったときだけ上限に数える。失敗したら元の写真のまま)
-async function catReplace(){
-  const k=selApi;
-  if(catState!=='ok'||catBusy>=0||k<0||!catItems[k]||catLeft()<=0)return;
-  const gen=catGen;
+// k番の枠に新しい1枚を入れる(入れ替え・空き枠に足す)。うまくいったときだけ上限に数える。失敗したら元のまま
+async function catFill(k){
+  if(catState!=='ok'||catBusy>=0||k<0||k>=catItems.length||catLeft()<=0)return;
+  const gen=catGen,old=catItems[k];
   catBusy=k;renderCatPics();
-  const got=await catFetch(1,new Set(catItems.map(o=>o.ou)));
+  const got=await catFetch(1,catUrls(),catItems.map((o,i)=>i===k?null:o));
   if(gen!==catGen)return;
   catBusy=-1;
   if(got.length){
-    const old=catItems[k];catItems[k]=got[0];
+    catItems[k]=got[0];
     if(old&&old.url.startsWith('blob:'))URL.revokeObjectURL(old.url);
     catUse();catSaveAll();tone(880,0,.15,.08);
-  }else toast('catRepFail',2600);
+  }else toast(old?'catRepFail':'catAddFail',2600);
   renderCatPics();renderPics();
 }
+function catReplace(){if(selApi>=0&&catItems[selApi])catFill(selApi);}
+// 選んだ写真を消す(確認のあと)。消した写真は二度と出さない。上限には数えない
+function catDelAsk(){
+  const k=selApi,o=catItems[k];
+  if(catState!=='ok'||catBusy>=0||!o)return;
+  const im=$('#catDelImg');im.src=safeImgUrl(o.url);
+  $('#catDelOv').dataset.k=String(k);
+  $('#catDelOv').classList.add('on');
+}
+function catDelClose(){$('#catDelOv').classList.remove('on');$('#catDelImg').removeAttribute('src');}
+function catDelDo(){
+  const k=Number($('#catDelOv').dataset.k),o=catItems[k];
+  catDelClose();
+  if(catBusy>=0||!o||k!==selApi)return;
+  catNgAdd(o.ou);
+  catItems[k]=null;
+  if(o.url.startsWith('blob:'))URL.revokeObjectURL(o.url);
+  selApi=-1;catSaveAll();toast('catDelDone',2000);
+  renderCatPics();renderPics();
+}
+$('#catDelOv').onclick=e=>{if(e.target.id==='catDelOv')catDelClose();};
+$('#catDelNo').onclick=catDelClose;
+$('#catDelYes').onclick=catDelDo;
+$('#catDel').onclick=()=>{ensureAudio();catDelAsk();};
 function renderCatPics(){
-  const box=$('#catPics'),msg=$('#catMsg'),btn=$('#catMore'),q=$('#catQuota');box.replaceChildren();
+  const box=$('#catPics'),msg=$('#catMsg'),btn=$('#catMore'),del=$('#catDel'),q=$('#catQuota');box.replaceChildren();
   msg.classList.toggle('on',catState==='loading'||catState==='fail');
   msg.textContent=catState==='fail'?t('catFail'):catState==='loading'?t('catLoading'):'';
-  $('#catCredit').style.display=catState==='ok'?'':'none';
   const show=catState==='ok';
-  btn.style.display=show?'':'none';q.style.display=show?'':'none';
+  $('#catCredit').style.display=show&&catItems.some(Boolean)?'':'none';
+  $('#catBtns').style.display=show?'':'none';q.style.display=show?'':'none';
   if(catState==='loading'){
     for(let i=0;i<CAT_N;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
     return;
   }
+  const left=catLeft();
   catItems.forEach((o,k)=>{
     if(k===catBusy){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);return;}
+    if(!o){
+      // 空き枠:タップで1枚足す(入れ替えと同じく1日の上限に数える)
+      const d=document.createElement('button');d.className='pic add';
+      const ph=mk('div','ph');
+      if(left>0){ph.append(mk('b',null,'+'),mk('span',null,t('catAdd')));}
+      else{ph.append(mk('span',null,t('catEmpty')));d.disabled=true;}
+      d.appendChild(ph);
+      if(catBusy>=0)d.disabled=true;
+      d.onclick=()=>{ensureAudio();catFill(k);};
+      box.appendChild(d);return;
+    }
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     d.appendChild(im);
@@ -437,10 +504,16 @@ function renderCatPics(){
     box.appendChild(d);
   });
   if(!show)return;
-  const left=catLeft();
+  const noSel=selApi<0||!catItems[selApi];
   btn.textContent=catBusy>=0?t('catRepBusy'):t('catRep');
-  btn.disabled=catBusy>=0||left<=0||selApi<0;
-  q.textContent=left<=0?t('catRepDone'):(selApi<0?t('catRepHelp')+' ':'')+(kana?'(きょうは あと '+left+'まい)':'(今日はあと'+left+'枚)');
+  btn.disabled=catBusy>=0||left<=0||noSel;
+  del.textContent=t('catDel');
+  del.disabled=catBusy>=0||noSel;
+  const parts=[];
+  if(left<=0)parts.push(t('catRepDone'));
+  if(noSel)parts.push(t('catRepHelp'));
+  if(left>0)parts.push(kana?'(きょうは あと '+left+'まい)':'(今日はあと'+left+'枚)');
+  q.textContent=parts.join(' ');
 }
 $('#catMore').onclick=()=>{ensureAudio();catReplace();};
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:images[selPic];
