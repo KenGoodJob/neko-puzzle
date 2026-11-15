@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115153652';
+const APP_VERSION='20261115155017';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -129,6 +129,7 @@ const T={
   admUsed:['今日の入れ替え','きょうの いれかえ'],
   admSrcNone:['まだ取得していません','まだ しゅとく していません'],
   admSrcFail:['取得できませんでした(サンプルのみ)','しゅとく できませんでした(サンプルのみ)'],
+  admDb:['iPad内の保存場所','iPadないの ほぞんばしょ'],admDbOk:['使えます','つかえます'],admDbNg:['開けませんでした','ひらけませんでした'],
 };
 const LANG_KEY='jigsaw-kana';
 let kana=0;
@@ -416,12 +417,14 @@ async function catFetch(n,skip,items){
 }
 // catItems の null は空き枠(消した所)。保存にも {empty:true} として残し、次に開いても空きのまま
 function catSaveAll(){
+  if(catNoSave)return;
   const list=catItems.map(o=>o?{src:o.src,ou:o.ou,blob:o.blob||null}:{empty:true});
   jgQueue(()=>idbPut('cats',{v:2,list}));
 }
 // 保存した写真を読む(形式を確かめてから使う)。並び順と空き枠はそのまま
 async function catLoadSaved(){
   const o=await jgQueue(()=>idbGet('cats'));
+  if(o===IDB_ERR)throw new Error('idb');
   if(!o||typeof o!=='object'||(o.v!==1&&o.v!==2)||!Array.isArray(o.list))return [];
   const ng=new Set(catNg());
   const ok=o.list.slice(0,CAT_N).filter(e=>e&&typeof e==='object'&&(e.empty===true||(typeof e.ou==='string'&&!ng.has(e.ou)&&
@@ -429,17 +432,22 @@ async function catLoadSaved(){
     (e.blob===null||(e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6)))));
   const rs=await Promise.allSettled(ok.map(e=>{
     if(e.empty===true)return Promise.resolve(null);
-    if(e.blob){const u=URL.createObjectURL(e.blob);return loadImg(u).ready.then(img=>({api:true,src:e.src,ou:e.ou,blob:e.blob,url:u,img,ready:Promise.resolve(img)}));}
+    // 保存した写真が読めないときは、同じ写真をアドレスから読み直す(別の写真には替えない)
+    if(e.blob){const u=URL.createObjectURL(e.blob);return loadImg(u).ready.then(img=>({api:true,src:e.src,ou:e.ou,blob:e.blob,url:u,img,ready:Promise.resolve(img)}),
+      ()=>{URL.revokeObjectURL(u);return loadCatImg(e.ou).then(img=>catMakeItem(e.src,e.ou,img));});}
     return loadCatImg(e.ou).then(img=>({api:true,src:e.src,ou:e.ou,blob:null,url:e.ou,img,ready:Promise.resolve(img)}));
   }));
   return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
 }
 const catUrls=()=>new Set(catItems.filter(Boolean).map(o=>o.ou));
 // 開始画面を初めて開いたとき:保存した写真を出し、6枚に足りなければ足りない分だけ取る(上限には数えない。消した空き枠は除く)
+// 保存場所が読めなかったときは、表示用に写真を取るが保存はしない(前の6枚を上書きしないため)
+let catNoSave=false;
 async function initCats(){
   const gen=++catGen;
   catState='loading';renderCatPics();
-  let items=await catLoadSaved();
+  let items;
+  try{items=await catLoadSaved();catNoSave=false;}catch(e){items=[];catNoSave=true;}
   if(gen!==catGen)return;
   if(items.length<CAT_N){
     const more=await catFetch(CAT_N-items.length,new Set(items.filter(Boolean).map(o=>o.ou)),items);
@@ -612,16 +620,19 @@ $('#albZoom').onclick=()=>{ensureAudio();if(selAlb>=0)zoomOpen(albItems[selAlb])
 /* ====== ごほうびの絵(クリアした猫の写真。iPad内の IndexedDB 'album' に保存) ====== */
 // {v:1, list:[{id, src, ou, blob:JPEG, at:ms}]}。新しい順。100枚まで(超えたら古いものから消える)
 const ALB_MAX=100,ALB_ID=/^[a-z0-9]{4,24}$/;
-let albItems=[];
+let albItems=[],albReady=false; // albReady:保存を読めた(読めていないときは上書きしない)
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const catMetaOk=m=>!!m&&typeof m==='object'&&((m.src==='thecatapi'&&TCA_IMG_RE.test(m.ou))||(m.src==='cataas'&&CATAAS_IMG_RE.test(m.ou)));
 function albSave(){
+  if(!albReady)return;
   const list=albItems.map(o=>({id:o.id,src:o.src,ou:o.ou,blob:o.blob,at:o.at}));
   jgQueue(()=>idbPut('album',{v:1,list}));
 }
 async function albLoad(){
   const o=await jgQueue(()=>idbGet('album'));
-  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return;
+  if(o===IDB_ERR){renderAlb();return;}
+  albReady=true;
+  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list)){renderAlb();return;}
   const ng=new Set(catNg()),seen=new Set();
   const ok=o.list.filter(e=>{
     if(!e||typeof e!=='object'||typeof e.id!=='string'||!ALB_ID.test(e.id)||!catMetaOk(e)||ng.has(e.ou)||seen.has(e.ou))return false;
@@ -633,7 +644,13 @@ async function albLoad(){
   if(selAlb>=albItems.length)selAlb=-1;
   renderAlb();
 }
-// クリアした絵をごほうびに入れる。入れたら true(猫の写真以外・もう入っている写真は入れない)
+// クリアした絵をごほうびに入れる(保存をまだ読めていなければ、先に読み直す)。入れたら true
+async function albAddSafe(item){
+  if(!albReady)await albLoad();
+  if(!albReady)return false;
+  return albAdd(item);
+}
+// 猫の写真以外・もう入っている写真は入れない
 function albAdd(item){
   if(!item||!catMetaOk(item)||!(item.blob instanceof Blob)||item.blob.type!=='image/jpeg')return false;
   if(catNg().includes(item.ou)||albItems.some(o=>o.ou===item.ou))return false;
@@ -1052,7 +1069,8 @@ function finish(){
   recordPlay('jigsaw');
   setTimeout(()=>{drawBoard();pieces.forEach(p=>p.el.style.opacity=0);sndDone();},350);
   lastSec=sec;$('#doneMsg').textContent=doneText(sec);
-  $('#doneGift').style.display=albAdd(jgItem)?'':'none';
+  $('#doneGift').style.display='none';
+  albAddSafe(jgItem).then(g=>{$('#doneGift').style.display=g?'':'none';});
   donePrep(jgItem,'#doneSave');
   setTimeout(()=>$('#doneOv').classList.add('on'),1700);
 }
@@ -1125,17 +1143,61 @@ $('#hintBtn').onclick=()=>{
 // 'jigsaw-img':絵(サンプルは番号、写真は正方形に切り出したJPEG) / 'jigsaw':ピースの状態。同じ id で組にする
 const JG_DB='neko-puzzle',JG_ST='save';
 let jgDbP=null,jgQ=Promise.resolve(),jgContData=null,jgThumbUrl=null;
+// iPadのSafariは、ページを開いた直後に保存場所(IndexedDB)を開けないことがある。
+// 開けなかったときは少し待って開き直す(最大4回)。それでもだめなら、そのとき使う処理には「読めなかった」(IDB_ERR)を返し、
+// 「保存がない」と区別する(保存がないと思って上書きしないため)。次に使うときにまた開き直す
+const IDB_ERR=Object.freeze({idbErr:true});
+const idbDiag={ok:false,fails:0,last:''};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function idbOpenOnce(){
+  return new Promise((res,rej)=>{
+    let done=false;const tm=setTimeout(()=>{if(!done){done=true;rej(new Error('timeout'));}},4000);
+    try{
+      const q=indexedDB.open(JG_DB,1);
+      q.onupgradeneeded=()=>{q.result.createObjectStore(JG_ST);};
+      q.onsuccess=()=>{
+        const db=q.result;if(done){try{db.close();}catch(e){}return;}
+        done=true;clearTimeout(tm);
+        db.onclose=()=>{jgDbP=null;};
+        db.onversionchange=()=>{try{db.close();}catch(e){}jgDbP=null;};
+        res(db);
+      };
+      q.onerror=()=>{if(done)return;done=true;clearTimeout(tm);rej(q.error||new Error('open'));};
+    }catch(e){done=true;clearTimeout(tm);rej(e);}
+  });
+}
+let idbFailUntil=0; // 開けなかった直後は、しばらく開き直さない(待ち時間が重ならないように)
 function jgDb(){
-  if(!jgDbP)jgDbP=new Promise((res,rej)=>{
-    try{const q=indexedDB.open(JG_DB,1);q.onupgradeneeded=()=>{q.result.createObjectStore(JG_ST);};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}catch(e){rej(e);}
-  }).catch(()=>null);
+  if(!jgDbP&&Date.now()<idbFailUntil)return Promise.resolve(null);
+  if(!jgDbP){
+    const p=(async()=>{
+      // Safari の対策:先に databases() を呼ぶと開けるようになることがある
+      try{if(indexedDB.databases)await Promise.race([indexedDB.databases().catch(()=>{}),sleep(800)]);}catch(e){}
+      for(let i=0;i<3;i++){
+        try{const db=await idbOpenOnce();idbDiag.ok=true;return db;}
+        catch(e){idbDiag.fails++;idbDiag.last=String(e&&e.name||e&&e.message||'error').slice(0,40);if(i<2)await sleep(300*(i+1));}
+      }
+      idbDiag.ok=false;idbFailUntil=Date.now()+5000;
+      if(jgDbP===p)jgDbP=null;
+      return null;
+    })();
+    jgDbP=p;
+  }
   return jgDbP;
 }
-function idbReq(mode,fn){
+const IDB_NODB=Object.freeze({idbErr:true,noDb:true});
+function idbReq1(mode,fn){
   return jgDb().then(db=>new Promise(res=>{
-    if(!db){res(null);return;}
-    try{const tx=db.transaction(JG_ST,mode),r=fn(tx.objectStore(JG_ST));tx.oncomplete=()=>res(r&&'result' in r?r.result:true);tx.onerror=tx.onabort=()=>res(null);}catch(e){res(null);}
+    if(!db){res(IDB_NODB);return;}
+    try{const tx=db.transaction(JG_ST,mode),r=fn(tx.objectStore(JG_ST));tx.oncomplete=()=>res(r&&'result' in r?r.result:true);tx.onerror=tx.onabort=()=>res(IDB_ERR);}
+    catch(e){jgDbP=null;res(IDB_ERR);} // 接続が切れていたら次は開き直す
   }));
+}
+// 開いていた接続で失敗したら、1回だけ開き直してやり直す(開けなかったときはやり直さない)
+async function idbReq(mode,fn){
+  let r=await idbReq1(mode,fn);
+  if(r===IDB_ERR){jgDbP=null;r=await idbReq1(mode,fn);}
+  return r===IDB_NODB?IDB_ERR:r;
 }
 const idbPut=(k,v)=>idbReq('readwrite',s=>{s.put(v,k);});
 const idbGet=k=>idbReq('readonly',s=>s.get(k));
@@ -1202,8 +1264,8 @@ function itemFromRec(im){
   return it;
 }
 async function jgLoad(){
-  const s=await idbGet('jigsaw');if(!s)return null;
-  const im=await idbGet('jigsaw-img');
+  const s=await idbGet('jigsaw');if(!s||s===IDB_ERR)return null;
+  const im=await idbGet('jigsaw-img');if(im===IDB_ERR)return null; // 読めなかったときは消さない
   if(!jgValid(s,im)){await Promise.all([idbDel('jigsaw'),idbDel('jigsaw-img')]);return null;}
   return {s,im};
 }
@@ -1680,7 +1742,7 @@ function sdNew(lv,item){
 async function sdContinue(){
   const s=sdLoad();if(!s){renderSdCont();return;}
   let item=images[0];
-  if(s.img){const im=await jgQueue(()=>idbGet('sudoku-img'));if(im&&im.id===s.img&&imRecOk(im))item=itemFromRec(im);}
+  if(s.img){const im=await jgQueue(()=>idbGet('sudoku-img'));if(im&&im!==IDB_ERR&&im.id===s.img&&imRecOk(im))item=itemFromRec(im);}
   sd=s;sdSetPic(item);show('sdPlay');requestAnimationFrame(()=>sdBegin());
 }
 function sdFinish(){
@@ -1691,7 +1753,8 @@ function sdFinish(){
   if(sdDoneRec&&sdDoneRec.newRec)[1047,1319,1568,2093].forEach((f,i)=>tone(f,1.0+i*.12,.5,.14));
   sdLastSec=sec;$('#sdDoneMsg').textContent=doneText(sec);sdRenderDone();
   $('#sdCat').src=safeImgUrl(sdItem?sdItem.url:images[0].url);
-  $('#sdGift').style.display=albAdd(sdItem)?'':'none';
+  $('#sdGift').style.display='none';
+  albAddSafe(sdItem).then(g=>{$('#sdGift').style.display=g?'':'none';});
   donePrep(sdItem,'#sdSave');
   setTimeout(()=>$('#sdDoneOv').classList.add('on'),900);
 }
@@ -1703,7 +1766,7 @@ async function renderSdCont(){
   if(sv&&sv.img){im=await jgQueue(()=>idbGet('sudoku-img'));if(gen!==sdContGen)return;}
   if(sdThumbUrl){URL.revokeObjectURL(sdThumbUrl);sdThumbUrl=null;}
   if(!sv){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
-  if(im&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
+  if(im&&im!==IDB_ERR&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
   const pic=mk('img');pic.alt='';pic.src=safeImgUrl(src);
   const tx=mk('span','ctx');tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🔢 '+t('gSd')+' ・ '+t('s'+sv.lv)+' ・ ⏱ '+fmt(Math.floor(sv.el))));
   cb.replaceChildren(pic,tx);cb.style.display='';renderMenuNew();
@@ -1754,8 +1817,10 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{if(sdPlaying)sdSave();});
 window.SD_READY=true;
 sdApplyLang();
-// 起動時:猫の写真・ごほうびの絵を読み、ジグソーの「続きから」を出す
-initCats();albLoad();renderJgCont();
+// 起動時:猫の写真・ごほうびの絵を読み、ジグソーの「続きから」を出す。
+// 保存データを消されにくくするよう頼む(できる端末だけ)。開いた直後は保存場所が開けないことがあるので少し待つ
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}
+setTimeout(()=>{initCats();albLoad();renderJgCont();renderSdCont();},300);
 
 /* ====== 管理用の設定(メニューの版番号を3秒長押しで開く) ====== */
 // キーは画面・ログに出さない(入力欄は伏せ字、設定済みかどうかだけ表示)
@@ -1779,6 +1844,9 @@ function admRender(msgKey){
   $('#admSrc').textContent=t('admSrc')+':'+nm;
   $('#admLimV').textContent=kana?catLimit()+'まい':catLimit()+'枚';
   $('#admUsed').textContent=t('admUsed')+':'+(kana?catUsed()+'まい':catUsed()+'枚');
+  const n=catItems.filter(Boolean).length;
+  $('#admDb').textContent=t('admDb')+':'+(idbDiag.ok?t('admDbOk'):t('admDbNg'))+(idbDiag.fails?(kana?'(ひらけなかった かいすう '+idbDiag.fails+' '+idbDiag.last+')':'(開けなかった回数 '+idbDiag.fails+' '+idbDiag.last+')'):'')
+    +' ・ '+(kana?'しゃしん '+n+'まい・ごほうび '+albItems.length+'まい':'写真'+n+'枚・ごほうび'+albItems.length+'枚')+(catNoSave?(kana?'・しゃしんは ほぞん していません':'・写真は保存していません'):'');
 }
 function admOpen(){ensureAudio();tone(660,0,.15,.08);$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
 // キーを変えても保存した写真はそのまま(次の入れ替えから新しいキーで取る)
