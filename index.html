@@ -15,7 +15,40 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .screen{position:absolute;inset:0;display:none;flex-direction:column}
 .screen.on{display:flex}
-#start,#menu,#sdStart{overflow-y:auto;padding:24px 28px 50px;align-items:center;-webkit-overflow-scrolling:touch}
+#start,#sdStart,.mscroll{overflow-y:auto;padding:24px 28px 50px;align-items:center;-webkit-overflow-scrolling:touch}
+/* 最初の画面:上は絵を選ぶ(スクロール)、下に「選んだ絵」と遊ぶパズルのボタンをいつも出す */
+.mscroll{flex:1;display:flex;flex-direction:column;overscroll-behavior:contain}
+.mfoot{flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:12px 24px;padding-bottom:max(12px,env(safe-area-inset-bottom));background:#fff;border-top:3px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.06);justify-content:center}
+.mSel{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:16px;color:var(--sub);flex:0 0 auto}
+.mSel img,.usePic img{width:88px;height:88px;border-radius:14px;border:4px solid var(--pri);object-fit:cover;background:#eee;display:block}
+.gbtn{flex:1 1 0;max-width:380px;min-height:100px;border-radius:26px;border:4px solid var(--pri);background:#FFF0E4;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 5px 0 var(--pri-d);padding:6px 12px}
+.gbtn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--pri-d)}
+.gbtn .em{font-size:48px;line-height:1}
+.gbtn .gt{font-size:32px;font-weight:bold;color:var(--pri-d)}
+@media (max-width:860px){.gbtn .gt{font-size:27px}.gbtn .em{font-size:40px}.mfoot{gap:12px;padding-left:16px;padding-right:16px}}
+.usePic{display:flex;align-items:center;gap:18px;width:100%;max-width:980px;margin-top:14px;font-size:22px;color:var(--sub)}
+.usePic img{width:110px;height:110px}
+.usePic img.flip{transform:scaleX(-1)}
+.gift{font-weight:bold;color:#9A6A00!important;background:#FFF6D6;border-radius:16px;padding:8px 12px}
+.ov.zoom{background:rgba(30,22,16,.85)}
+.zbox{display:flex;flex-direction:column;align-items:center;gap:20px}
+#zoomImg{width:min(92vw,calc(100vh - 220px));height:min(92vw,calc(100vh - 220px));object-fit:contain;border-radius:18px;border:6px solid #fff;background:#fff;display:block}
+#zoomClose,#zoomSave{min-width:260px;min-height:88px;font-size:30px}
+.zhint{color:#fff;font-size:19px;margin:0;opacity:.9;text-align:center}
+.kana .zhint{word-break:keep-all;overflow-wrap:anywhere}
+/* 長押しで「写真に追加」できるように */
+#zoomImg,#sdCat{-webkit-touch-callout:default;pointer-events:auto}
+.bb.sv{margin-top:18px;min-height:64px;font-size:22px;min-width:300px}
+.bb:disabled{opacity:.45}
+@media (max-height:860px){#sdDoneOv .bb.sv{margin-top:12px;min-height:58px}}
+#sdBoard{position:relative}
+#sdImg{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;display:block}
+.sc{z-index:1}
+@keyframes rvIn{from{background-color:#fff}}
+.sc.rv{animation:rvIn 1.2s ease-out;background:rgba(255,255,255,.12);text-shadow:0 0 3px #fff,0 0 6px #fff,0 0 10px #fff}
+.sc.rv.peer{background:rgba(255,243,230,.45)}
+.sc.rv.same{background:rgba(255,217,168,.75)}
+.sc.rv.sel{background:rgba(255,184,120,.75)}
 h1{font-size:40px;margin:8px 0 4px;letter-spacing:.05em;text-align:center}
 .lead{font-size:20px;color:var(--sub);margin:0 0 6px;text-align:center}
 h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
@@ -72,6 +105,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .ver{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;font-size:14px;color:var(--sub);letter-spacing:.02em;line-height:1.2}
 .dlg .ver{margin-top:14px}
 #menu .ver{padding:8px 4px;touch-action:none}
+.cont.jg+.cont.jg{margin-top:14px}
+#menu h2.new{margin-top:30px;color:var(--sub)}
 /* 新しい版のお知らせ */
 .upd{width:100%;max-width:980px;background:#FFF3C4;border:4px solid #E8B020;border-radius:22px;padding:14px 20px;margin:0 0 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
 .upd[hidden]{display:none}
@@ -238,22 +273,14 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <body>
 
 <section id="menu" class="screen on">
+ <div class="mscroll" id="mscroll">
   <div class="upd" id="updBar" role="status" hidden></div>
   <div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div><div class="ver" id="menuVer"></div></div>
   <h1>🐱 ねこの脳トレパズル</h1>
-  <p class="lead" data-t="menuLead">遊びたいパズルを選んでください</p>
-  <div class="games">
-    <button class="game" id="gJigBtn"><span class="em">🧩</span><span class="gt" data-t="gJig">ジグソーパズル</span><span class="gd" data-t="gJigD">絵を組み立てる</span></button>
-    <button class="game" id="gSdBtn"><span class="em">🔢</span><span class="gt" data-t="gSd">数独</span><span class="gd" data-t="gSdD">数字を入れる</span></button>
-  </div>
-</section>
-
-<section id="start" class="screen">
-  <div class="topRow"><button class="mnb" data-t="menu">◀ メニュー</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
-  <h1>🧩 <span data-t="gJig">ジグソーパズル</span></h1>
-  <p class="lead" data-t="lead">好きな絵と、ピースの数を選んでください</p>
+  <p class="lead" data-t="menuLead">絵を選んでから、下のボタンで遊ぶパズルを選んでください</p>
   <button class="cont jg" id="jgCont" style="display:none"></button>
-  <h2 class="new" id="jgHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
+  <button class="cont jg" id="sdCont" style="display:none"></button>
+  <h2 class="new" id="menuHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
   <h2 data-t="hPic">① 絵を選ぶ</h2>
   <h3 class="subh" data-t="hCat">ねこの写真</h3>
   <p class="catMsg" id="catMsg"></p>
@@ -264,13 +291,33 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="more del" id="catDel"></button>
   </div>
   <p class="catQuota" id="catQuota" style="display:none"></p>
+  <h3 class="subh s2" id="albH"></h3>
+  <p class="catMsg on" id="albMsg" data-t="albEmpty">猫の写真のパズルをクリアすると、ここに入ります</p>
+  <div class="pics" id="albPics"></div>
+  <div class="catBtns" id="albBtns" style="display:none">
+    <button class="more" id="albZoom" data-t="zoom">🔍 大きく見る</button>
+    <button class="more del" id="albDel" data-t="albDel">🗑 この絵を消す</button>
+  </div>
   <h3 class="subh s2" data-t="hIllust">イラスト・iPadの写真</h3>
   <div class="pics" id="pics"></div>
-  <h2 data-t="hCnt">② ピースの数</h2>
+  <div class="catBtns"><button class="more" id="picZoom" data-t="zoom">🔍 大きく見る</button></div>
+ </div>
+ <div class="mfoot">
+  <div class="mSel"><img id="mSelImg" alt=""><span data-t="selPic">選んだ絵</span></div>
+  <button class="gbtn" id="gJigBtn"><span class="em">🧩</span><span class="gt" data-t="gJig">ジグソーパズル</span></button>
+  <button class="gbtn" id="gSdBtn"><span class="em">🔢</span><span class="gt" data-t="gSd">数独</span></button>
+ </div>
+</section>
+
+<section id="start" class="screen">
+  <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
+  <h1>🧩 <span data-t="gJig">ジグソーパズル</span></h1>
+  <div class="usePic"><img id="jgSelImg" alt=""><span data-t="usePic">この絵で遊びます</span></div>
+  <h2 data-t="hCnt">① ピースの数</h2>
   <div class="counts" id="counts"></div>
-  <h2 data-t="hRot">③ ピースの向き</h2>
+  <h2 data-t="hRot">② ピースの向き</h2>
   <div class="counts" id="rots"></div>
-  <h2 data-t="hFlip">④ 絵の向き</h2>
+  <h2 data-t="hFlip">③ 絵の向き</h2>
   <div class="counts" id="flips"></div>
   <button class="go" id="goBtn" data-t="go">始める</button>
 </section>
@@ -296,11 +343,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 </section>
 
 <section id="sdStart" class="screen">
-  <div class="topRow"><button class="mnb" data-t="menu">◀ メニュー</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
+  <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
   <h1>🔢 <span data-t="gSd">数独</span></h1>
-  <p class="lead" data-t="sdLead">難しさを選んで始めてください</p>
-  <button class="cont" id="sdCont"></button>
-  <h2 id="sdHLv"></h2>
+  <div class="usePic"><img id="sdSelImg" alt=""><span data-t="usePicSd">3×3がそろうと、この絵が見えてきます</span></div>
+  <h2 data-t="sdHLv">難しさ</h2>
   <div class="counts" id="sdLvs"></div>
   <button class="go" id="sdGo" data-t="go">始める</button>
   <h2 id="sdRecH" style="display:none;margin-top:44px" data-t="sdRecH">記録のある問題</h2>
@@ -311,13 +357,14 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="bar">
     <button class="tb" id="sdBackBtn" style="margin-right:22px" data-t="back">◀ 戻る</button>
     <button class="tb" id="sdHintBtn" data-t="hint">ヒント</button>
+    <button class="tb" id="sdPicBtn" data-t="sdPicBtn">🐱 絵を見る</button>
     <button class="tb" id="sdSetBtn" data-t="set">設定</button>
     <span class="sp"></span>
     <span class="info"><span data-t="left1">残り</span> <b id="sdLeft">0</b> <span data-t="sdLeft2">マス</span></span>
     <span class="info">⏱ <b id="sdTime">0:00</b></span>
   </div>
   <div id="sdArea">
-    <div id="sdBoard"></div>
+    <div id="sdBoard"><img id="sdImg" alt=""></div>
     <div id="sdPad">
       <div class="nums" id="sdNums"></div>
       <button class="tg" id="sdMemoBtn"><span data-t="sdMemo">✏️ メモ</span><b>なし</b></button>
@@ -332,6 +379,15 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <div class="toast" id="toast"></div>
 <div id="qpBack"></div>
 <div id="qp"><div class="qpT" data-t="sdMemo">✏️ メモ</div><div class="qpN" id="qpN"></div><div class="qpR"><button class="tb" id="qpErase" data-t="sdErase">消す</button><button class="tb" id="qpClose" data-t="close">閉じる</button></div></div>
+
+<div class="ov zoom" id="zoomOv"><div class="zbox">
+  <img id="zoomImg" alt="">
+  <div class="row">
+    <button class="bb s" id="zoomSave" data-t="savePic">📥 iPadに保存</button>
+    <button class="bb p" id="zoomClose" data-t="close">閉じる</button>
+  </div>
+  <p class="zhint" data-t="saveHint">絵を長押しして「写真に追加」でも保存できます</p>
+</div></div>
 
 <div class="ov" id="mihonOv"><div class="dlg">
   <canvas id="mihonCv"></canvas>
@@ -369,7 +425,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <div class="ov" id="catDelOv"><div class="dlg">
   <h3 data-t="catDelQ">この写真を消しますか?</h3>
   <img id="catDelImg" alt="">
-  <p data-t="catDelP">消した写真は、もう出てきません</p>
+  <p id="catDelP">消した写真は、もう出てきません</p>
   <button class="bb p" id="catDelNo" style="width:100%;min-height:96px;font-size:32px" data-t="catDelNo">消さない</button>
   <div style="height:56px"></div>
   <button class="bb s" id="catDelYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="catDelYes">消す</button>
@@ -395,10 +451,12 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="big">🎉</div>
   <h3 data-t="done">完成!</h3>
   <p id="doneMsg">よくできました</p>
+  <p class="gift" id="doneGift" style="display:none" data-t="gift">🎁 ごほうびの絵に入れました</p>
   <div class="row">
     <button class="bb s" id="otherBtn" data-t="other">他の絵にする</button>
     <button class="bb p" id="againBtn" data-t="again">もう一度</button>
   </div>
+  <button class="bb s sv" id="doneSave" data-t="savePicDone">📥 この絵をiPadに保存</button>
 </div></div>
 
 <div class="ov" id="sdDoneOv"><div class="dlg">
@@ -407,12 +465,14 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <h3>🎉 <span data-t="done">完成!</span></h3>
   <p id="sdDoneMsg">よくできました</p>
   <p id="sdRecInfo" class="recinfo"></p>
+  <p class="gift" id="sdGift" style="display:none" data-t="gift">🎁 ごほうびの絵に入れました</p>
   <button class="bb p" id="sdRetryBtn" data-t="sdRetry">同じ問題にもう一度</button>
   <button class="tg fav" id="sdFavBtn"><span data-t="sdFav">★ この問題を残す</span><b>なし</b></button>
   <div class="row">
     <button class="bb s" id="sdOtherBtn" data-t="sdOther">難しさを変える</button>
     <button class="bb p" id="sdAgainBtn" data-t="sdAgain">もう一問</button>
   </div>
+  <button class="bb s sv" id="sdSave" data-t="savePicDone">📥 この絵をiPadに保存</button>
 </div></div>
 
 <!-- 管理用の設定(メニューの版番号を3秒長押しで開く。ご家族は使わない) -->
@@ -433,6 +493,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115144709"></script>
+<script src="app.js?v=20261115153652"></script>
 </body>
 </html>

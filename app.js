@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115144709';
+const APP_VERSION='20261115153652';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -10,14 +10,29 @@ document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
 // [漢字, ひらがな] の組。画面への反映は必ず textContent で行う
 const T={
   lang:['文字','もじ'],
-  menuLead:['遊びたいパズルを選んでください','あそびたい パズルを えらんでください'],
+  menuLead:['絵を選んでから、下のボタンで遊ぶパズルを選んでください','えを えらんでから、したの ボタンで あそぶ パズルを えらんでください'],
+  selPic:['選んだ絵','えらんだ え'],
+  usePic:['この絵で遊びます','この えで あそびます'],
+  zoom:['🔍 大きく見る','🔍 おおきく みる'],
+  hAlb:['🎁 ごほうびの絵','🎁 ごほうびの え'],
+  albEmpty:['猫の写真のパズルをクリアすると、ここに入ります','ねこの しゃしんの パズルを クリアすると、ここに はいります'],
+  albDel:['🗑 この絵を消す','🗑 この えを けす'],
+  albDelP:['ごほうびの絵から消えます。消した写真は、もう出てきません','ごほうびの えから きえます。けした しゃしんは、もう でてきません'],
+  gift:['🎁 ごほうびの絵に入れました','🎁 ごほうびの えに いれました'],
+  usePicSd:['3×3の9マスを埋めて「🐱 絵を見る」を押すと、この絵が見えてきます','3×3の 9マスを うめて「🐱 えを みる」を おすと、この えが みえてきます'],
+  sdPicBtn:['🐱 絵を見る','🐱 えを みる'],
+  sdPicNone:['9マスとも埋まった3×3がありません','9マス ぜんぶ うまった 3×3が ありません'],
+  sdPicNo:['まだ絵は出ません','まだ えは でません'],
+  savePic:['📥 iPadに保存','📥 iPadに ほぞん'],
+  savePicDone:['📥 この絵をiPadに保存','📥 この えを iPadに ほぞん'],
+  saveHint:['絵を長押しして「写真に追加」でも保存できます','えを ながおしして「しゃしんに ついか」でも ほぞん できます'],
+  saveNo:['この絵は保存できません','この えは ほぞん できません'],
   menu:['◀ メニュー','◀ メニュー'],
   gJig:['ジグソーパズル','ジグソーパズル'],gJigD:['絵を組み立てる','えを くみたてる'],
   gSd:['数独','すうどく'],gSdD:['数字を入れる','すうじを いれる'],
-  lead:['好きな絵と、ピースの数を選んでください','すきな えと、ピースの かずを えらんでください'],
   hPic:['① 絵を選ぶ','① えを えらぶ'],
-  hCnt:['② ピースの数','② ピースの かず'],
-  hRot:['③ ピースの向き','③ ピースの むき'],
+  hCnt:['① ピースの数','① ピースの かず'],
+  hRot:['② ピースの向き','② ピースの むき'],
   go:['始める','はじめる'],
   back:['◀ 戻る','◀ もどる'],
   mihon:['見本','みほん'],
@@ -64,10 +79,11 @@ const T={
   catWait:['読み込み中…','よみこみちゅう…'],
   catLoading:['猫の写真を読み込んでいます。少しお待ちください','ねこの しゃしんを よみこんでいます。すこし おまちください'],
   catCredit:['写真:The Cat API / cataas','しゃしん:The Cat API / cataas'],
-  hFlip:['④ 絵の向き','④ えの むき'],
+  hFlip:['③ 絵の向き','③ えの むき'],
   f0:['そのまま','そのまま'],f0d:['見たとおり','みた とおり'],
   f1:['左右反転','さゆう はんてん'],f1d:['鏡に映した絵','かがみに うつした え'],
   catFail:['猫の写真を読み込めませんでした。下のイラストで遊べます','ねこの しゃしんを よみこめませんでした。したの イラストで あそべます'],
+  lead:['ピースの数を選んで始めてください','ピースの かずを えらんで はじめてください'],
   c2:['とても簡単','とても かんたん'],c3:['簡単','かんたん'],c4:['普通','ふつう'],c5:['やや難しい','やや むずかしい'],
   c6:['難しい','むずかしい'],c7:['とても難しい','とても むずかしい'],c8:['達人','たつじん'],
   r0:['そろっている','そろっている'],r0d:['向きはそのまま','むきは そのまま'],
@@ -242,8 +258,8 @@ const images=[
 const SAMPLE_N=images.length; // 数独の完成画面に出す絵(サンプルの猫イラスト)
 const picName=o=>o.nm?o.nm[kana]:t('photoN')+' '+o.no;
 const COUNTS=[2,3,4,5,6,7,8];
-// selApi:猫の写真(API)を選んでいるときはその番号、イラスト・iPadの写真なら -1
-let selPic=0, selN=3, photoNo=0, selApi=-1;
+// 絵の選択:selApi=猫の写真(API)の番号、selAlb=ごほうびの絵の番号(どちらも -1 ならイラスト・iPadの写真の selPic)
+let selPic=0, selN=3, photoNo=0, selApi=-1, selAlb=-1;
 
 const $=s=>document.querySelector(s);
 // 安全な要素作成:文字は必ず textContent で入れる(HTMLとして解釈させない)
@@ -253,10 +269,10 @@ function safeImgUrl(u){u=String(u||'');return /^(data:image\/|blob:|https:\/\/)/
 function renderPics(){
   const box=$('#pics');box.replaceChildren();
   images.forEach((o,i)=>{
-    const d=document.createElement('button');d.className='pic'+(selApi<0&&i===selPic?' sel':'');
+    const d=document.createElement('button');d.className='pic'+(selApi<0&&selAlb<0&&i===selPic?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     d.append(im,mk('div','nm',picName(o)));
-    d.onclick=()=>{selPic=i;selApi=-1;renderPics();renderCatPics();};
+    d.onclick=()=>{selPic=i;selApi=-1;selAlb=-1;renderAllPics();};
     box.appendChild(d);
   });
   const ph=document.createElement('label');ph.className='pic photo';
@@ -267,9 +283,10 @@ function renderPics(){
     const f=e.target.files&&e.target.files[0];if(!f||!/^image\//.test(f.type||''))return;
     const url=URL.createObjectURL(f);
     images.push(Object.assign({no:++photoNo,url},loadImg(url)));
-    selPic=images.length-1;selApi=-1;renderPics();renderCatPics();
+    selPic=images.length-1;selApi=-1;selAlb=-1;renderAllPics();
   };
   box.appendChild(ph);
+  renderSel();
 }
 
 /* ====== 猫の写真(インターネットから取得) ====== */
@@ -449,29 +466,36 @@ async function catFill(k){
   renderCatPics();renderPics();
 }
 function catReplace(){if(selApi>=0&&catItems[selApi])catFill(selApi);}
-// 選んだ写真を消す(確認のあと)。消した写真は二度と出さない。上限には数えない
-function catDelAsk(){
-  const k=selApi,o=catItems[k];
-  if(catState!=='ok'||catBusy>=0||!o)return;
-  const im=$('#catDelImg');im.src=safeImgUrl(o.url);
-  $('#catDelOv').dataset.k=String(k);
-  $('#catDelOv').classList.add('on');
+// 選んだ写真を消す(確認のあと)。不適切な画像が紛れたとき用。消した写真は二度と出さない(猫の写真・ごほうびの絵の両方から消す)。上限には数えない
+function catDelAsk(){const k=selApi;if(catState==='ok'&&catBusy<0&&catItems[k])delOpen('cat',k,catItems[k]);}
+function albDelAsk(){const k=selAlb;if(albItems[k])delOpen('alb',k,albItems[k]);}
+function delOpen(tp,k,o){
+  $('#catDelImg').src=safeImgUrl(o.url);
+  $('#catDelP').textContent=t(tp==='alb'?'albDelP':'catDelP');
+  const ov=$('#catDelOv');ov.dataset.tp=tp;ov.dataset.k=String(k);ov.classList.add('on');
 }
 function catDelClose(){$('#catDelOv').classList.remove('on');$('#catDelImg').removeAttribute('src');}
 function catDelDo(){
-  const k=Number($('#catDelOv').dataset.k),o=catItems[k];
+  const ov=$('#catDelOv'),tp=ov.dataset.tp,k=Number(ov.dataset.k);
+  const o=tp==='alb'?albItems[k]:catItems[k];
   catDelClose();
-  if(catBusy>=0||!o||k!==selApi)return;
-  catNgAdd(o.ou);
-  catItems[k]=null;
-  if(o.url.startsWith('blob:'))URL.revokeObjectURL(o.url);
-  selApi=-1;catSaveAll();toast('catDelDone',2000);
-  renderCatPics();renderPics();
+  if(!o||(tp==='alb'?k!==selAlb:(catBusy>=0||k!==selApi)))return;
+  const ou=o.ou;catNgAdd(ou);
+  let ch=false;
+  catItems.forEach((x,i)=>{if(x&&x.ou===ou){if(x.url.startsWith('blob:'))URL.revokeObjectURL(x.url);catItems[i]=null;ch=true;if(selApi===i)selApi=-1;}});
+  if(ch)catSaveAll();
+  const before=albItems.length;
+  albItems=albItems.filter(x=>{if(x.ou!==ou)return true;URL.revokeObjectURL(x.url);return false;});
+  if(albItems.length!==before){selAlb=-1;albSave();}
+  if(tp==='alb')selAlb=-1;else selApi=-1;
+  toast('catDelDone',2000);
+  renderAllPics();
 }
 $('#catDelOv').onclick=e=>{if(e.target.id==='catDelOv')catDelClose();};
 $('#catDelNo').onclick=catDelClose;
 $('#catDelYes').onclick=catDelDo;
 $('#catDel').onclick=()=>{ensureAudio();catDelAsk();};
+$('#albDel').onclick=()=>{ensureAudio();albDelAsk();};
 function renderCatPics(){
   const box=$('#catPics'),msg=$('#catMsg'),btn=$('#catMore'),del=$('#catDel'),q=$('#catQuota');box.replaceChildren();
   msg.classList.toggle('on',catState==='loading'||catState==='fail');
@@ -500,7 +524,7 @@ function renderCatPics(){
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     d.appendChild(im);
-    d.onclick=()=>{if(catBusy>=0)return;selApi=k;renderCatPics();renderPics();};
+    d.onclick=()=>{if(catBusy>=0)return;selApi=k;selAlb=-1;renderAllPics();};
     box.appendChild(d);
   });
   if(!show)return;
@@ -516,7 +540,124 @@ function renderCatPics(){
   q.textContent=parts.join(' ');
 }
 $('#catMore').onclick=()=>{ensureAudio();catReplace();};
-const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:images[selPic];
+const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:selAlb>=0&&albItems[selAlb]?albItems[selAlb]:images[selPic];
+function renderAllPics(){renderCatPics();renderAlb();renderPics();}
+// 選んだ絵を、最初の画面の下の欄・各パズルの開始画面に出す。「大きく見る」はイラスト・iPadの写真を選んでいるときだけ押せる
+function renderSel(){
+  if(typeof albItems==='undefined')return;
+  const it=curItem(),u=safeImgUrl(it&&it.url);
+  ['#mSelImg','#jgSelImg','#sdSelImg'].forEach(q=>{const e=$(q);if(e&&e.getAttribute('src')!==u)e.src=u;});
+  $('#jgSelImg').classList.toggle('flip',selFlip);
+  $('#picZoom').disabled=selApi>=0||selAlb>=0;
+}
+/* ====== iPad本体(写真アプリ)への保存 ====== */
+// 正方形のJPEGにして、共有の画面(「画像を保存」で写真アプリへ)を開く。共有できない端末ではダウンロード。
+// 共有はボタンを押した直後でないと開けないので、ファイルは画面を開いたときに先に作っておく
+async function picFile(item){
+  if(!item)return null;
+  let blob=item.blob instanceof Blob&&item.blob.type==='image/jpeg'?item.blob:null;
+  if(!blob){
+    let img;try{img=await item.ready;}catch(e){return null;}
+    blob=await new Promise(res=>{try{
+      const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sw=Math.min(iw,ih);
+      const o=item.nm?1200:Math.max(1,Math.min(1600,sw)); // イラスト(SVG)は大きめに描く
+      const cv=document.createElement('canvas');cv.width=o;cv.height=o;
+      const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o,o);c.imageSmoothingQuality='high';
+      c.drawImage(img,(iw-sw)/2,(ih-sw)/2,sw,sw,0,0,o,o);
+      cv.toBlob(b=>res(b&&b.type==='image/jpeg'?b:null),'image/jpeg',0.92);
+    }catch(e){res(null);}}); // 持ち出しが許可されていない写真は作れない
+  }
+  if(!blob)return null;
+  const d=new Date(Date.now()+9*3600e3).toISOString().replace(/\D/g,'').slice(0,14);
+  try{return new File([blob],'neko-'+d+'.jpg',{type:'image/jpeg'});}catch(e){return null;}
+}
+function sharePic(file){
+  if(!file){toast('saveNo',2400);return;}
+  try{if(navigator.canShare&&navigator.share&&navigator.canShare({files:[file]})){navigator.share({files:[file]}).catch(()=>{});return;}}catch(e){}
+  const a=document.createElement('a'),u=URL.createObjectURL(file);a.href=u;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),20000);
+}
+// 完成画面の保存ボタン:作れたら押せる、作れなければ隠す
+const doneFiles={};
+function donePrep(item,sel){
+  const b=$(sel),tok={};doneFiles[sel]=tok;b.disabled=true;b.style.display='';
+  picFile(item).then(f=>{if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;if(f)b.disabled=false;else b.style.display='none';});
+}
+$('#doneSave').onclick=()=>{ensureAudio();const f=doneFiles['#doneSave'];if(f instanceof File)sharePic(f);};
+$('#sdSave').onclick=()=>{ensureAudio();const f=doneFiles['#sdSave'];if(f instanceof File)sharePic(f);};
+
+/* ====== 絵を大きく見る ====== */
+// 写真アプリに入れやすいよう、表示もJPEGにする(長押し →「写真に追加」)
+let zoomTok=null,zoomFile=null,zoomUrl=null;
+function zoomOpen(item){
+  if(!item)return;
+  const tok={};zoomTok=tok;zoomFile=null;
+  $('#zoomImg').src=safeImgUrl(item.url);$('#zoomSave').disabled=true;$('#zoomOv').classList.add('on');
+  picFile(item).then(f=>{
+    if(zoomTok!==tok)return;
+    zoomFile=f;if(!f)return;
+    zoomUrl=URL.createObjectURL(f);$('#zoomImg').src=zoomUrl;$('#zoomSave').disabled=false;
+  });
+}
+function zoomClose(){
+  zoomTok=null;zoomFile=null;$('#zoomOv').classList.remove('on');$('#zoomImg').removeAttribute('src');
+  if(zoomUrl){URL.revokeObjectURL(zoomUrl);zoomUrl=null;}
+}
+$('#zoomSave').onclick=()=>{ensureAudio();if(zoomFile)sharePic(zoomFile);};
+$('#zoomOv').onclick=e=>{if(e.target.id==='zoomOv'||e.target.classList.contains('zbox'))zoomClose();};
+$('#zoomClose').onclick=zoomClose;
+$('#picZoom').onclick=()=>{ensureAudio();if(selApi<0&&selAlb<0)zoomOpen(images[selPic]);};
+$('#albZoom').onclick=()=>{ensureAudio();if(selAlb>=0)zoomOpen(albItems[selAlb]);};
+
+/* ====== ごほうびの絵(クリアした猫の写真。iPad内の IndexedDB 'album' に保存) ====== */
+// {v:1, list:[{id, src, ou, blob:JPEG, at:ms}]}。新しい順。100枚まで(超えたら古いものから消える)
+const ALB_MAX=100,ALB_ID=/^[a-z0-9]{4,24}$/;
+let albItems=[];
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const catMetaOk=m=>!!m&&typeof m==='object'&&((m.src==='thecatapi'&&TCA_IMG_RE.test(m.ou))||(m.src==='cataas'&&CATAAS_IMG_RE.test(m.ou)));
+function albSave(){
+  const list=albItems.map(o=>({id:o.id,src:o.src,ou:o.ou,blob:o.blob,at:o.at}));
+  jgQueue(()=>idbPut('album',{v:1,list}));
+}
+async function albLoad(){
+  const o=await jgQueue(()=>idbGet('album'));
+  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return;
+  const ng=new Set(catNg()),seen=new Set();
+  const ok=o.list.filter(e=>{
+    if(!e||typeof e!=='object'||typeof e.id!=='string'||!ALB_ID.test(e.id)||!catMetaOk(e)||ng.has(e.ou)||seen.has(e.ou))return false;
+    if(!(e.blob instanceof Blob)||e.blob.type!=='image/jpeg'||e.blob.size>=20e6||!Number.isFinite(e.at))return false;
+    seen.add(e.ou);return true;
+  }).slice(0,ALB_MAX);
+  albItems.forEach(x=>URL.revokeObjectURL(x.url));
+  albItems=ok.map(e=>{const url=URL.createObjectURL(e.blob);return Object.assign({alb:true,id:e.id,src:e.src,ou:e.ou,blob:e.blob,at:e.at,url},loadImg(url));});
+  if(selAlb>=albItems.length)selAlb=-1;
+  renderAlb();
+}
+// クリアした絵をごほうびに入れる。入れたら true(猫の写真以外・もう入っている写真は入れない)
+function albAdd(item){
+  if(!item||!catMetaOk(item)||!(item.blob instanceof Blob)||item.blob.type!=='image/jpeg')return false;
+  if(catNg().includes(item.ou)||albItems.some(o=>o.ou===item.ou))return false;
+  const cur=selAlb>=0?albItems[selAlb]:null;
+  const url=URL.createObjectURL(item.blob);
+  albItems.unshift(Object.assign({alb:true,id:newId(),src:item.src,ou:item.ou,blob:item.blob,at:Date.now(),url},loadImg(url)));
+  while(albItems.length>ALB_MAX){const x=albItems.pop();if(x!==cur)URL.revokeObjectURL(x.url);}
+  selAlb=cur?albItems.indexOf(cur):-1;
+  albSave();renderAlb();return true;
+}
+function renderAlb(){
+  const box=$('#albPics');box.replaceChildren();
+  $('#albH').textContent=t('hAlb')+(albItems.length?(kana?'('+albItems.length+'まい)':'('+albItems.length+'枚)'):'');
+  $('#albMsg').style.display=albItems.length?'none':'';
+  albItems.forEach((o,k)=>{
+    const d=document.createElement('button');d.className='pic'+(selAlb===k?' sel':'');
+    const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);d.appendChild(im);
+    d.onclick=()=>{selAlb=k;selApi=-1;renderAllPics();};
+    box.appendChild(d);
+  });
+  $('#albBtns').style.display=albItems.length?'':'none';
+  $('#albZoom').disabled=selAlb<0;$('#albDel').disabled=selAlb<0;
+  renderSel();
+}
 function renderCounts(){
   const box=$('#counts');box.replaceChildren();
   COUNTS.forEach(n=>{
@@ -535,7 +676,7 @@ function renderFlips(){
   [[false,'f0'],[true,'f1']].forEach(([v,k])=>{
     const b=document.createElement('button');b.className='cnt'+(v===selFlip?' sel':'');
     b.append(document.createTextNode(t(k)),mk('small',null,t(k+'d')));
-    b.onclick=()=>{selFlip=v;try{localStorage.setItem(FLIP_KEY,v?'1':'0');}catch(e){}renderFlips();};
+    b.onclick=()=>{selFlip=v;try{localStorage.setItem(FLIP_KEY,v?'1':'0');}catch(e){}renderFlips();renderSel();};
     box.appendChild(b);
   });
 }
@@ -553,7 +694,7 @@ function applyLang(){
   document.body.classList.toggle('kana',kana===1);
   document.querySelectorAll('[data-t]').forEach(e=>{e.textContent=t(e.dataset.t);});
   document.querySelectorAll('.lgb').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===kana));
-  renderPics();renderCatPics();renderCounts();renderRots();renderFlips();
+  renderPics();renderCatPics();renderAlb();renderCounts();renderRots();renderFlips();
   if(lastSec!=null)$('#doneMsg').textContent=doneText(lastSec);
   if(window.SD_READY)sdApplyLang();
   if(window.JG_READY)renderJgCont();
@@ -776,8 +917,9 @@ function makePieces(rots){
       e:{t:r===0?0:-H(r,c), b:r===N-1?0:H(r+1,c), l:c===0?0:-V(r,c), r:c===N-1?0:V(r,c+1)}});
   }
 }
-async function newGame(){
-  const item=curItem();
+let jgItem=null; // 遊んでいる絵
+async function newGame(it){
+  const item=it||curItem();jgItem=item;
   try{curImg=await item.ready;}catch(e){goStart();return;}
   N=selN;ROT=selRot;FLIP=selFlip;resetPlay();
   const rnd=()=>Math.random()<.5?1:-1;
@@ -910,6 +1052,8 @@ function finish(){
   recordPlay('jigsaw');
   setTimeout(()=>{drawBoard();pieces.forEach(p=>p.el.style.opacity=0);sndDone();},350);
   lastSec=sec;$('#doneMsg').textContent=doneText(sec);
+  $('#doneGift').style.display=albAdd(jgItem)?'':'none';
+  donePrep(jgItem,'#doneSave');
   setTimeout(()=>$('#doneOv').classList.add('on'),1700);
 }
 // 利用履歴(遊んだ日時と、どのパズルか)。今は端末内に置くだけ。のちに別端末で見られる仕組みへつなぐ
@@ -923,7 +1067,8 @@ function recordPlay(game){
 /* ====== ボタン類 ====== */
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));}
 // 戻る・やめる:遊んでいる途中なら保存してから開始画面へ(次は「続きから」)
-function goStart(){if(playing){jgPause();jgSave();}playing=false;clearInterval(timer);hideHint();show('start');renderJgCont();}
+// 戻る・やめる:遊んでいる途中なら保存してから最初の画面へ(次は「続きから」)
+function goStart(){if(playing){jgPause();jgSave();}playing=false;clearInterval(timer);hideHint();show('menu');renderJgCont();}
 function jgStartNew(){show('play');requestAnimationFrame(()=>newGame());}
 $('#goBtn').onclick=()=>{ensureAudio();if(jgContData)$('#jgNewOv').classList.add('on');else jgStartNew();};
 $('#backBtn').onclick=()=>{
@@ -934,7 +1079,7 @@ $('#backBtn').onclick=()=>{
 $('#quitOv').onclick=e=>{if(e.target.id==='quitOv')$('#quitOv').classList.remove('on');};
 $('#quitNo').onclick=()=>$('#quitOv').classList.remove('on');
 $('#quitYes').onclick=()=>{$('#quitOv').classList.remove('on');goStart();};
-$('#againBtn').onclick=()=>{$('#doneOv').classList.remove('on');newGame();};
+$('#againBtn').onclick=()=>{$('#doneOv').classList.remove('on');newGame(jgItem);};
 $('#otherBtn').onclick=()=>{$('#doneOv').classList.remove('on');goStart();};
 function setTg(btn,on){btn.classList.toggle('on',on);btn.querySelector('b').textContent=on?'あり':'なし';}
 $('#setBtn').onclick=()=>{setTg($('#soundBtn'),soundOn);$('#setOv').classList.add('on');};
@@ -998,9 +1143,14 @@ const idbDel=k=>idbReq('readwrite',s=>{s.delete(k);});
 // 書き込み・読み込みは順番どおりに行う
 const jgQueue=f=>(jgQ=jgQ.then(()=>f(),()=>f()));
 function jgClear(){jgQueue(()=>Promise.all([idbDel('jigsaw'),idbDel('jigsaw-img')]));}
+// 途中保存用の絵の記録(ジグソー・数独で共通)。猫の写真なら取得元とアドレスも残す(クリア時にごほうびへ入れるため)
 function jgImgRec(item,img){
   const idx=images.indexOf(item);
   if(item.nm&&idx>=0&&idx<SAMPLE_N)return Promise.resolve({kind:'sample',idx});
+  const meta=catMetaOk(item)?{src:item.src,ou:item.ou}:null;
+  return imgBlobRec(img).then(r=>{if(r&&meta)r.cat=meta;return r;});
+}
+function imgBlobRec(img){
   return new Promise(res=>{try{
     const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sw=Math.min(iw,ih),o=Math.max(1,Math.min(1600,sw));
     const cv=document.createElement('canvas');cv.width=o;cv.height=o;
@@ -1035,9 +1185,21 @@ function jgValid(s,im){
   if(!Array.isArray(s.tray)||s.tray.length!==tr.length)return false;
   const set=new Set(s.tray);if(set.size!==tr.length||!tr.every(i=>set.has(i)))return false;
   if(!(Number.isFinite(s.el)&&s.el>=0&&s.el<3600000))return false;
+  return imRecOk(im);
+}
+// 保存した絵の記録が正しい形か
+function imRecOk(im){
+  if(!im||typeof im!=='object')return false;
   if(im.kind==='sample')return Number.isInteger(im.idx)&&im.idx>=0&&im.idx<SAMPLE_N;
-  if(im.kind==='blob')return im.blob instanceof Blob&&/^image\/(jpeg|png|webp)$/.test(im.blob.type)&&im.blob.size<20e6;
+  if(im.kind==='blob')return im.blob instanceof Blob&&/^image\/(jpeg|png|webp)$/.test(im.blob.type)&&im.blob.size<20e6&&(im.cat===undefined||catMetaOk(im.cat));
   return false;
+}
+// 保存した絵の記録から、遊ぶ絵を作る
+function itemFromRec(im){
+  if(im.kind==='sample')return images[im.idx];
+  const url=URL.createObjectURL(im.blob),it=Object.assign({no:0,url,blob:im.blob},loadImg(url));
+  if(im.cat){it.src=im.cat.src;it.ou=im.cat.ou;}
+  return it;
 }
 async function jgLoad(){
   const s=await idbGet('jigsaw');if(!s)return null;
@@ -1049,19 +1211,16 @@ async function renderJgCont(){
   const d=await jgQueue(jgLoad),cb=$('#jgCont');
   jgContData=d;
   if(jgThumbUrl){URL.revokeObjectURL(jgThumbUrl);jgThumbUrl=null;}
-  $('#jgHNew').style.display=d?'':'none';
-  if(!d){cb.style.display='none';cb.replaceChildren();return;}
+  if(!d){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
   let src;
   if(d.im.kind==='sample')src=images[d.im.idx].url;else{jgThumbUrl=URL.createObjectURL(d.im.blob);src=jgThumbUrl;}
   const im=mk('img');im.alt='';im.src=safeImgUrl(src);if(d.s.flip)im.className='flip';
   const left=d.s.pc.filter(p=>p.w!==2).length,tx=mk('span','ctx');
-  tx.append(mk('span','ct',t('sdCont')),mk('small',null,t('left1')+' '+left+' '+t('left2')+' ・ ⏱ '+fmt(Math.floor(d.s.el))));
-  cb.replaceChildren(im,tx);cb.style.display='';
+  tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🧩 '+t('gJig')+' ・ '+t('left1')+' '+left+' '+t('left2')+' ・ ⏱ '+fmt(Math.floor(d.s.el))));
+  cb.replaceChildren(im,tx);cb.style.display='';renderMenuNew();
 }
 async function jgRestore(d){
-  const {s,im}=d;let item;
-  if(im.kind==='sample'){selPic=im.idx;selApi=-1;item=images[im.idx];}
-  else{const url=URL.createObjectURL(im.blob);item=Object.assign({no:++photoNo,url},loadImg(url));images.push(item);selPic=images.length-1;selApi=-1;renderPics();renderCatPics();}
+  const {s,im}=d,item=itemFromRec(im);jgItem=item;
   try{curImg=await item.ready;}catch(e){jgClear();jgContData=null;goStart();return;}
   N=s.N;ROT=s.rot;FLIP=!!s.flip;selN=N;selRot=ROT;selFlip=FLIP;renderCounts();renderRots();renderFlips();
   jgH=s.h.slice();jgV=s.vv.slice();jgId=s.id;
@@ -1094,11 +1253,12 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{if(playing)jgSave();});
 window.JG_READY=true;
 
-/* ====== メニュー ====== */
-document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>show('menu');});
-// ジグソーの開始画面を開いたとき、猫の写真をまだ取っていなければ取りに行く
-$('#gJigBtn').onclick=()=>{ensureAudio();show('start');renderJgCont();if(catState==='idle')initCats();};
-$('#gSdBtn').onclick=()=>{ensureAudio();sdRenderStart();show('sdStart');};
+/* ====== 最初の画面(絵を選ぶ → 遊ぶパズルを選ぶ) ====== */
+document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');renderJgCont();if(window.SD_READY)renderSdCont();};});
+$('#gJigBtn').onclick=()=>{ensureAudio();renderSel();show('start');$('#start').scrollTop=0;};
+$('#gSdBtn').onclick=()=>{ensureAudio();renderSel();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
+// 「続きから」があるときは「新しく始める」の見出しを出す
+function renderMenuNew(){$('#menuHNew').style.display=$('#jgCont').style.display!=='none'||$('#sdCont').style.display!=='none'?'':'none';}
 let toastT=null;
 function toast(key,ms){const e=$('#toast');e.textContent=t(key);e.classList.add('on');clearTimeout(toastT);if(ms)toastT=setTimeout(()=>e.classList.remove('on'),ms);}
 function hideToast(){clearTimeout(toastT);$('#toast').classList.remove('on');}
@@ -1190,7 +1350,7 @@ function sdSaveOpt(){try{localStorage.setItem(SD_OPT,JSON.stringify({v:2,err:sdO
 const sdElapsed=()=>sd?sd.el+(sdT0?(Date.now()-sdT0)/1000:0):0;
 function sdSave(){
   if(!sd)return;
-  try{localStorage.setItem(SD_KEY,JSON.stringify({v:1,lv:sd.lv,giv:sd.giv.join(''),sol:sd.sol.join(''),cur:sd.cur.join(''),hint:sd.hint.join(''),memo:sd.memo,el:Math.floor(sdElapsed()),rid:sd.rid||''}));}catch(e){}
+  try{localStorage.setItem(SD_KEY,JSON.stringify({v:1,lv:sd.lv,giv:sd.giv.join(''),sol:sd.sol.join(''),cur:sd.cur.join(''),hint:sd.hint.join(''),memo:sd.memo,el:Math.floor(sdElapsed()),rid:sd.rid||'',img:sd.img||'',rv:sd.rv||0}));}catch(e){}
 }
 // 保存データは形式を確かめてから使う
 function sdLoad(){
@@ -1203,10 +1363,23 @@ function sdLoad(){
     const giv=[...o.giv].map(Number),sol=[...o.sol].map(Number),cur=[...o.cur].map(Number),hint=[...o.hint].map(Number);
     for(let i=0;i<81;i++){if(giv[i]&&(giv[i]!==sol[i]||cur[i]!==giv[i]))return null;if(hint[i]&&cur[i]!==sol[i])return null;}
     const rid=typeof o.rid==='string'&&SD_RID.test(o.rid)?o.rid:'';
-    return {lv:o.lv,giv,sol,cur,hint,memo:o.memo.slice(),el:Math.min(o.el,360000),rid};
+    // img:絵の記録の id(IndexedDB 'sudoku-img')、rv:絵を見せた3×3(ビット)。古い保存にはないので省略可
+    const img=typeof o.img==='string'&&SD_RID.test(o.img)?o.img:'';
+    const rv=Number.isInteger(o.rv)&&o.rv>=0&&o.rv<512?o.rv:0;
+    return {lv:o.lv,giv,sol,cur,hint,memo:o.memo.slice(),el:Math.min(o.el,360000),rid,img,rv};
   }catch(e){return null;}
 }
-function sdClearSave(){try{localStorage.removeItem(SD_KEY);}catch(e){}}
+function sdClearSave(){try{localStorage.removeItem(SD_KEY);}catch(e){}jgQueue(()=>idbDel('sudoku-img'));}
+// 数独の絵(遊ぶ絵 sdItem)。盤の後ろに置き、3×3ごとに見せる
+let sdItem=null;
+function sdSetPic(item){sdItem=item;$('#sdImg').src=safeImgUrl(item&&item.url);}
+// 絵の記録を書く(続きから遊ぶとき同じ絵を出すため)
+async function sdPicRec(item){
+  const id=newId();sd.img=id;
+  let img;try{img=await item.ready;}catch(e){return;}
+  const rec=await jgImgRec(item,img);
+  if(rec&&sd&&sd.img===id){rec.id=id;jgQueue(()=>idbPut('sudoku-img',rec));}
+}
 
 /* ====== 数独:記録(同じ問題に繰り返し挑戦) ====== */
 // localStorage 'sudoku-recs' に {v:1, list:[{id, lv, giv, sol, best:{t:秒, h:ヒント数}, tries, last:最後に遊んだ時刻(ms), fav}]}
@@ -1295,12 +1468,14 @@ function sdStartRec(id){
   if(sdLoad()){sdPending=()=>sdPlayRec(id);$('#sdNewOv').classList.add('on');}
   else sdPlayRec(id);
 }
-function sdPlayRec(id){
+function sdPlayRec(id,item){
   const r=sdRecsLoad().find(x=>x.id===id);if(!r){sdRenderStart();return;}
+  item=item||curItem();sdSetPic(item);
   qpClose();lpCancel();hideToast();
   sdPlaying=false;clearInterval(sdTimer);sdT0=0;sdClearSave();
   const giv=[...r.giv].map(Number);
-  sd={lv:r.lv,giv,sol:[...r.sol].map(Number),cur:giv.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rid:r.id};
+  sd={lv:r.lv,giv,sol:[...r.sol].map(Number),cur:giv.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rid:r.id,rv:0};
+  sdPicRec(item);
   show('sdPlay');requestAnimationFrame(()=>sdBegin());
 }
 
@@ -1392,12 +1567,21 @@ function sdLayout(){
   sdBoard.style.setProperty('--c',(side/9)+'px');pad.style.setProperty('--b',Math.min(b,bh)+'px');
 }
 const sdLocked=i=>!!(sd.giv[i]||sd.hint[i]);
+// 3×3の状態:full=9マス埋まっている、ok=全部正しい
+function sdBlocks(){
+  const full=Array(9).fill(true),ok=Array(9).fill(true);
+  for(let i=0;i<81;i++){const b=sdB(i);if(!sd.cur[i])full[b]=false;if(sd.cur[i]!==sd.sol[i])ok[b]=false;}
+  return {full,ok};
+}
+// 絵を見せている3×3:「絵を見る」で見せた(rv)うえで、今も全部正しいもの(あとで数字を変えたら隠す)
+const sdShown=(bl,b)=>!!(sd.rv&(1<<b))&&bl.ok[b];
 function sdDraw(){
   if(!sd)return;
-  const sv=sdSel>=0?sd.cur[sdSel]:0,cnt=Array(10).fill(0);
+  const sv=sdSel>=0?sd.cur[sdSel]:0,cnt=Array(10).fill(0),bl=sdBlocks();
   sd.cur.forEach(v=>cnt[v]++);
   for(let i=0;i<81;i++){
     const C=sdCells[i],el=C.el,v=sd.cur[i];
+    el.classList.toggle('rv',sdShown(bl,sdB(i)));
     const peer=sdSel>=0&&i!==sdSel&&(sdR(i)===sdR(sdSel)||sdC(i)===sdC(sdSel)||sdB(i)===sdB(sdSel));
     el.classList.toggle('giv',!!sd.giv[i]);
     el.classList.toggle('hn',!!sd.hint[i]);
@@ -1412,6 +1596,17 @@ function sdDraw(){
   sdNumBtns.forEach((b,k)=>b.classList.toggle('full',cnt[k+1]>=9));
   $('#sdLeft').textContent=cnt[0];
   $('#sdUndoBtn').classList.toggle('off',!sdUndo.length);
+  // 「絵を見る」は、まだ見せていない埋まった3×3があるときだけ濃く
+  $('#sdPicBtn').classList.toggle('off',!bl.full.some((f,b)=>f&&!sdShown(bl,b)));
+}
+// 「🐱 絵を見る」:9マス埋まった3×3のうち、正しいものだけ絵を見せる(間違っているものは出さない。どこが違うかは言わない)
+function sdShowPic(){
+  ensureAudio();
+  if(!sdPlaying||!sd)return;
+  const bl=sdBlocks();let any=false,got=false;
+  for(let b=0;b<9;b++){if(!bl.full[b]||sdShown(bl,b))continue;any=true;if(bl.ok[b]){sd.rv|=1<<b;got=true;}}
+  if(got){[784,988,1175].forEach((f,i)=>tone(f,i*.1,.3,.1));sdDraw();sdSave();}
+  else toast(any?'sdPicNo':'sdPicNone',2400);
 }
 function sdPush(){sdUndo.push({cur:sd.cur.slice(),memo:sd.memo.slice(),hint:sd.hint.slice(),sel:sdSel});if(sdUndo.length>300)sdUndo.shift();}
 function sdPlace(i,d){sd.cur[i]=d;sd.memo[i]=0;for(const p of SD_PEERS[i])sd.memo[p]&=~(1<<d);}
@@ -1466,35 +1661,54 @@ function sdBegin(){
   sdSel=sd.cur.findIndex(v=>!v);sdPlaying=true;sdLastSec=null;
   sdLayout();sdDraw();sdResume();sdSave();
 }
-function sdNew(lv){
+function sdNew(lv,item){
   qpClose();lpCancel();
+  item=item||curItem();sdSetPic(item);
   sdPlaying=false;clearInterval(sdTimer);sdT0=0;sd=null;sdClearSave();
-  sdCells.forEach(C=>{C.el.className=C.el.className.replace(/\b(giv|hn|wrong|sel|peer|same|flash)\b/g,'').trim();C.v.textContent='';C.mm.style.display='none';});
+  sdCells.forEach(C=>{C.el.className=C.el.className.replace(/\b(giv|hn|wrong|sel|peer|same|flash|rv)\b/g,'').trim();C.v.textContent='';C.mm.style.display='none';});
   $('#sdLeft').textContent='81';$('#sdTime').textContent='0:00';
   show('sdPlay');requestAnimationFrame(sdLayout);toast('sdMaking');
   setTimeout(()=>{
     const p=sdMake(lv);
-    sd={lv,giv:p.g.slice(),sol:p.sol,cur:p.g.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0};
+    sd={lv,giv:p.g.slice(),sol:p.sol,cur:p.g.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rv:0};
+    sdPicRec(item);
     hideToast();
     if($('#sdPlay').classList.contains('on'))sdBegin();else{sdSave();sdRenderStart();}
   },60);
 }
-function sdContinue(){const s=sdLoad();if(!s){sdRenderStart();return;}sd=s;show('sdPlay');requestAnimationFrame(()=>sdBegin());}
+// 続きから:保存した絵の記録を読む(なければ最初のイラスト)
+async function sdContinue(){
+  const s=sdLoad();if(!s){renderSdCont();return;}
+  let item=images[0];
+  if(s.img){const im=await jgQueue(()=>idbGet('sudoku-img'));if(im&&im.id===s.img&&imRecOk(im))item=itemFromRec(im);}
+  sd=s;sdSetPic(item);show('sdPlay');requestAnimationFrame(()=>sdBegin());
+}
 function sdFinish(){
   qpClose();lpCancel();
   sdPlaying=false;const sec=Math.floor(sdElapsed());sdT0=0;clearInterval(sdTimer);
   sdClearSave();recordPlay('sudoku');sdRecordClear(sec);
-  sdSel=-1;sdDraw();sndDone();
+  sd.rv=511;sdSel=-1;sdDraw();sndDone();
   if(sdDoneRec&&sdDoneRec.newRec)[1047,1319,1568,2093].forEach((f,i)=>tone(f,1.0+i*.12,.5,.14));
   sdLastSec=sec;$('#sdDoneMsg').textContent=doneText(sec);sdRenderDone();
-  $('#sdCat').src=safeImgUrl(images[Math.floor(Math.random()*SAMPLE_N)].url);
+  $('#sdCat').src=safeImgUrl(sdItem?sdItem.url:images[0].url);
+  $('#sdGift').style.display=albAdd(sdItem)?'':'none';
+  donePrep(sdItem,'#sdSave');
   setTimeout(()=>$('#sdDoneOv').classList.add('on'),900);
 }
+// 最初の画面の数独の「続きから」(絵の小さな画像つき)
+let sdThumbUrl=null,sdContGen=0;
+async function renderSdCont(){
+  const gen=++sdContGen,sv=sdLoad(),cb=$('#sdCont');
+  let src=images[0].url,im=null;
+  if(sv&&sv.img){im=await jgQueue(()=>idbGet('sudoku-img'));if(gen!==sdContGen)return;}
+  if(sdThumbUrl){URL.revokeObjectURL(sdThumbUrl);sdThumbUrl=null;}
+  if(!sv){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
+  if(im&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
+  const pic=mk('img');pic.alt='';pic.src=safeImgUrl(src);
+  const tx=mk('span','ctx');tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🔢 '+t('gSd')+' ・ '+t('s'+sv.lv)+' ・ ⏱ '+fmt(Math.floor(sv.el))));
+  cb.replaceChildren(pic,tx);cb.style.display='';renderMenuNew();
+}
 function sdRenderStart(){
-  const sv=sdLoad(),cb=$('#sdCont');
-  cb.style.display=sv?'':'none';
-  if(sv)cb.replaceChildren(mk('span','ct',t('sdCont')),mk('small',null,t('s'+sv.lv)+' ・ ⏱ '+fmt(Math.floor(sv.el))));
-  $('#sdHLv').textContent=sv?t('sdHNew'):t('sdHLv');
   const box=$('#sdLvs');box.replaceChildren();
   [0,1,2,3].forEach(k=>{
     const b=document.createElement('button');b.className='cnt'+(k===sdSelLv?' sel':'');
@@ -1505,20 +1719,21 @@ function sdRenderStart(){
   sdRenderRecs();
 }
 function sdApplyLang(){
-  sdRenderStart();
+  sdRenderStart();renderSdCont();
   if(sdLastSec!=null)$('#sdDoneMsg').textContent=doneText(sdLastSec);
   setTg($('#sdMemoBtn'),sdMemoMode);
   sdRenderDone();
 }
 $('#sdCont').onclick=()=>{ensureAudio();sdContinue();};
 $('#sdGo').onclick=()=>{ensureAudio();if(sdLoad()){sdPending=null;$('#sdNewOv').classList.add('on');}else sdNew(sdSelLv);};
+$('#sdPicBtn').onclick=sdShowPic;
 $('#sdNewOv').onclick=e=>{if(e.target.id==='sdNewOv'){sdPending=null;$('#sdNewOv').classList.remove('on');}};
 $('#sdNewNo').onclick=()=>{sdPending=null;$('#sdNewOv').classList.remove('on');sdContinue();};
 $('#sdNewYes').onclick=()=>{$('#sdNewOv').classList.remove('on');const f=sdPending;sdPending=null;if(f)f();else sdNew(sdSelLv);};
-$('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id);};
+$('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id,sdItem);};
 $('#sdFavBtn').onclick=()=>{if(sdDoneRec&&sdToggleFav(sdDoneRec.id))sdRenderDone();};
 // 戻る:途中は自動で保存されるので、確認なしで戻る(次は「続きから」で再開)
-$('#sdBackBtn').onclick=()=>{qpClose();lpCancel();if(sdPlaying)sdPause();sdPlaying=false;hideToast();sdRenderStart();show('sdStart');};
+$('#sdBackBtn').onclick=()=>{qpClose();lpCancel();if(sdPlaying)sdPause();sdPlaying=false;hideToast();show('menu');renderSdCont();};
 $('#sdHintBtn').onclick=sdHint;
 $('#sdEraseBtn').onclick=sdErase;
 $('#sdUndoBtn').onclick=sdDoUndo;
@@ -1528,7 +1743,7 @@ $('#sdSetClose').onclick=()=>$('#sdSetOv').classList.remove('on');
 $('#sdErrBtn').onclick=e=>{sdOpt.err=!sdOpt.err;setTg(e.currentTarget,sdOpt.err);sdSaveOpt();sdDraw();};
 $('#sdSameBtn').onclick=e=>{sdOpt.same=!sdOpt.same;setTg(e.currentTarget,sdOpt.same);sdSaveOpt();sdDraw();};
 $('#sdSoundBtn').onclick=e=>{soundOn=!soundOn;ensureAudio();setTg(e.currentTarget,soundOn);};
-$('#sdAgainBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdNew(sd?sd.lv:sdSelLv);};
+$('#sdAgainBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdNew(sd?sd.lv:sdSelLv,sdItem);};
 $('#sdOtherBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdRenderStart();show('sdStart');};
 // 画面を離れたら時間を止めて保存する
 document.addEventListener('visibilitychange',()=>{
@@ -1539,6 +1754,8 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{if(sdPlaying)sdSave();});
 window.SD_READY=true;
 sdApplyLang();
+// 起動時:猫の写真・ごほうびの絵を読み、ジグソーの「続きから」を出す
+initCats();albLoad();renderJgCont();
 
 /* ====== 管理用の設定(メニューの版番号を3秒長押しで開く) ====== */
 // キーは画面・ログに出さない(入力欄は伏せ字、設定済みかどうかだけ表示)
