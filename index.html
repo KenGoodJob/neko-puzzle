@@ -29,6 +29,9 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .usePic{display:flex;align-items:center;gap:18px;width:100%;max-width:980px;margin-top:14px;font-size:22px;color:var(--sub)}
 .usePic img{width:110px;height:110px}
 .usePic img.flip{transform:scaleX(-1)}
+.qm{flex:0 0 auto;width:96px;height:96px;border-radius:14px;border:4px solid #fff;background:#F6C9A0;color:#fff;font-size:64px;font-weight:bold;line-height:1;display:flex;align-items:center;justify-content:center;text-shadow:0 2px 0 var(--pri-d)}
+.usePic .qm{width:110px;height:110px;border-color:var(--pri);font-size:72px}
+#admInit{margin:6px auto 4px}
 .gift{font-weight:bold;color:#9A6A00!important;background:#FFF6D6;border-radius:16px;padding:8px 12px}
 .ov.zoom{background:rgba(30,22,16,.85)}
 .zbox{display:flex;flex-direction:column;align-items:center;gap:20px}
@@ -255,6 +258,12 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .cont.jg{flex-direction:row;gap:24px;padding:12px 24px}
 .cont.jg img{width:96px;height:96px;flex:0 0 auto;border-radius:14px;border:4px solid #fff;object-fit:cover;background:#eee}
 .cont.jg .ctx{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left}
+.cont.sdc{flex:0 0 auto;height:auto;padding:14px 22px;margin-top:22px;background:#FFF7D6;border-color:#D9A400;box-shadow:0 5px 0 #A67C00}
+.cont.sdc:active{box-shadow:0 1px 0 #A67C00}
+.cont.sdc .ct{color:#7A5A00}
+.cont.sdc .qm{width:104px;height:104px;background:#F2C230;text-shadow:0 2px 0 #A67C00}
+.cont.sdc .ctx{min-width:0}
+@media (max-width:860px){.cont.sdc .ct{font-size:30px}.cont.sdc small{font-size:20px}}
 #start h2.new{margin-top:30px;color:var(--sub)}
 #sdArea{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:28px;padding:18px;touch-action:manipulation}
 #sdArea.pt{flex-direction:column;gap:18px}
@@ -341,27 +350,29 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="upd" id="updBar" role="status" hidden></div>
   <div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div><div class="ver" id="menuVer"></div></div>
   <h1>🐱 ねこの脳トレパズル</h1>
-  <p class="lead" data-t="menuLead">絵を選んでから、下のボタンで遊ぶパズルを選んでください</p>
+  <p class="lead" data-t="menuLead">数独を解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます</p>
   <button class="cont jg" id="jgCont" style="display:none"></button>
   <button class="cont jg" id="sdCont" style="display:none"></button>
   <h2 class="new" id="menuHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
-  <h2 data-t="hPic">① 絵を選ぶ</h2>
-  <h3 class="subh" data-t="hCat">ねこの写真</h3>
+  <button class="cont jg sdc" id="sdCard"><span class="qm">?</span><span class="ctx"><span class="ct" data-t="sdCardT">🔢 数独で新しい猫を出す</span><small id="sdCardS"></small></span></button>
+  <h2 data-t="hPic">🧩 ジグソーパズルの絵を選ぶ</h2>
+  <h3 class="subh" data-t="hCat">出た猫</h3>
   <p class="catMsg" id="catMsg"></p>
   <div class="pics" id="catPics"></div>
   <div class="catBtns"><button class="more fold" id="catFold" style="display:none"></button></div>
   <p class="credit" id="catCredit" data-t="catCredit" style="display:none">写真:The Cat API / cataas</p>
   <div class="catBtns" id="catBtns" style="display:none">
-    <button class="more" id="catMore"></button>
     <button class="more del" id="catDel"></button>
   </div>
   <p class="catQuota" id="catQuota" style="display:none"></p>
+  <div id="albSec" hidden>
   <h3 class="subh s2" id="albH"></h3>
   <p class="catMsg on" id="albMsg" data-t="albEmpty">猫の写真のパズルをクリアすると、ここに入ります</p>
   <div class="pics" id="albPics"></div>
   <div class="catBtns" id="albBtns" style="display:none">
     <button class="more" id="albZoom" data-t="zoom">🔍 大きく見る</button>
     <button class="more del" id="albDel" data-t="albDel">🗑 この絵を消す</button>
+  </div>
   </div>
   <h3 class="subh s2" data-t="hIllust">イラスト・iPadの写真</h3>
   <div class="pics" id="pics"></div>
@@ -370,7 +381,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
  <div class="mfoot">
   <div class="mSel"><img id="mSelImg" alt=""><span data-t="selPic">選んだ絵</span></div>
   <button class="gbtn" id="gJigBtn"><span class="em">🧩</span><span class="gt" data-t="gJig">ジグソーパズル</span></button>
-  <button class="gbtn" id="gSdBtn"><span class="em">🔢</span><span class="gt" data-t="gSd">数独</span></button>
  </div>
 </section>
 
@@ -411,7 +421,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <section id="sdStart" class="screen">
   <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
   <h1>🔢 <span data-t="gSd">数独</span></h1>
-  <div class="usePic"><img id="sdSelImg" alt=""><span data-t="usePicSd">3×3がそろうと、この絵が見えてきます</span></div>
+  <div class="usePic"><span class="qm">?</span><span id="sdPicMsg"></span></div>
   <p class="noGift" id="sdNoGift" style="display:none"></p>
   <h2 data-t="sdHLv">難しさ</h2>
   <div class="counts" id="sdLvs"></div>
@@ -547,6 +557,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p id="sdDoneMsg">よくできました</p>
   <p id="sdRecInfo" class="recinfo"></p>
   <p class="gift" id="sdGift" style="display:none" data-t="gift">🎁 ごほうびの絵に入れました</p>
+  <p class="gift" id="sdNewCat" style="display:none"></p>
   <button class="bb p" id="sdRetryBtn" data-t="sdRetry">同じ問題にもう一度</button>
   <button class="tg fav" id="sdFavBtn"><span data-t="sdFav">★ この問題を残す</span><b>なし</b></button>
   <div class="row">
@@ -570,8 +581,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p class="admMsg" id="admMsg"></p>
   <button class="bb p admApv" id="admApv" data-t="admApvBtn">📋 許可リストの管理</button>
   <p class="src" id="admSrc"></p>
-  <div class="admLim"><span data-t="admLim">写真を足す(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
+  <div class="admLim"><span data-t="admLim">新しい猫(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
   <div class="admLim"><span class="src" id="admUsed"></span><button class="tb" id="admReset" data-t="admReset">0に戻す</button></div>
+  <button class="bb s" id="admInit" data-t="admInit">解放を最初に戻す(テスト用)</button>
+  <p class="src" data-t="admInitP">出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します</p>
   <button class="tg" id="admTest"><span data-t="admTest">テスト用のボタン</span><b>なし</b></button>
   <p class="src" id="admDb"></p>
   <button class="bb s" id="admClose" data-t="close">閉じる</button>
@@ -595,6 +608,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvDraftDel" data-t="apvDraftDel">下書きを消す</button><button class="bb s" id="apvClose" data-t="close">閉じる</button></div>
 </div></div>
 
-<script src="app.js?v=20261115210957"></script>
+<script src="app.js?v=20261116022303"></script>
 </body>
 </html>

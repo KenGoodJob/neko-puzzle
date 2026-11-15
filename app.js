@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115210957';
+const APP_VERSION='20261116022303';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -10,7 +10,15 @@ document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
 // [漢字, ひらがな] の組。画面への反映は必ず textContent で行う
 const T={
   lang:['文字','もじ'],
-  menuLead:['絵を選んでから、下のボタンで遊ぶパズルを選んでください','えを えらんでから、したの ボタンで あそぶ パズルを えらんでください'],
+  menuLead:['数独を解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます','すうどくを とくと、あたらしい ねこが でてきます。ジグソーパズルは、でた ねこや イラストを えらんで あそべます'],
+  sdCardT:['🔢 数独で新しい猫を出す','🔢 すうどくで あたらしい ねこを だす'],
+  sdcLimit:['今日の新しい猫はおしまい(明日また出ます)','きょうの あたらしい ねこは おしまい(あした また でます)'],
+  sdcNone:['新しい猫は準備中です','あたらしい ねこは じゅんびちゅう です'],
+  sdmNew:['解くと、新しい猫が出てきます。3×3の9マスを埋めて「🐱 絵を見る」を押すと、少しずつ見えてきます','とくと、あたらしい ねこが でてきます。3×3の 9マスを うめて「🐱 えを みる」を おすと、すこしずつ みえてきます'],
+  sdmLimit:['今日の新しい猫はおしまいです。出た猫の中から1匹で遊びます(明日また新しい猫が出ます)','きょうの あたらしい ねこは おしまい です。でた ねこの なかから 1ぴきで あそびます(あした また あたらしい ねこが でます)'],
+  sdmNone:['新しい猫は準備中です。出た猫の中から1匹で遊びます','あたらしい ねこは じゅんびちゅう です。でた ねこの なかから 1ぴきで あそびます'],
+  sdmIllust:['猫の写真は準備中です。イラストの中から1枚で遊びます','ねこの しゃしんは じゅんびちゅう です。イラストの なかから 1まいで あそびます'],
+  sdNewCat:['🐱 新しい猫が出ました!','🐱 あたらしい ねこが でました!'],
   selPic:['選んだ絵','えらんだ え'],
   usePic:['この絵で遊びます','この えで あそびます'],
   zoom:['🔍 大きく見る','🔍 おおきく みる'],
@@ -31,7 +39,7 @@ const T={
   menu:['◀ メニュー','◀ メニュー'],
   gJig:['ジグソーパズル','ジグソーパズル'],gJigD:['絵を組み立てる','えを くみたてる'],
   gSd:['数独','すうどく'],gSdD:['数字を入れる','すうじを いれる'],
-  hPic:['① 絵を選ぶ','① えを えらぶ'],
+  hPic:['🧩 ジグソーパズルの絵を選ぶ','🧩 ジグソーパズルの えを えらぶ'],
   hCnt:['① ピースの数','① ピースの かず'],
   hRot:['② ピースの向き','② ピースの むき'],
   go:['始める','はじめる'],
@@ -61,7 +69,7 @@ const T={
   photoNm:['iPadの写真','iPadの しゃしん'],
   photoN:['写真','しゃしん'],
   // 猫の写真(インターネットから取得)
-  hCat:['ねこの写真','ねこの しゃしん'],
+  hCat:['出た猫','でた ねこ'],
   hIllust:['イラスト・iPadの写真','イラスト・iPadの しゃしん'],
   catRep:['🔄 この写真を入れ替える','🔄 この しゃしんを いれかえる'],
   catRepBusy:['入れ替えています…','いれかえています…'],
@@ -94,7 +102,7 @@ const T={
   apvAdd:['+ 写真を足す','+ しゃしんを たす'],
   apvAddDone:['今日はここまでです。明日また足せます','きょうは ここまで です。あした また たせます'],
   apvNoMore:['新しい写真は、まだありません','あたらしい しゃしんは、まだ ありません'],
-  apvClearHelp:['パズルをクリアすると、写真が1枚増えます','パズルを クリアすると、しゃしんが 1まい ふえます'],
+  apvClearHelp:['数独をクリアすると、新しい猫が出ます','すうどくを クリアすると、あたらしい ねこが でます'],
   apvOpen1:['▼ 前の写真も見る','▼ まえの しゃしんも みる'],
   apvClose:['▲ 前の写真をたたむ','▲ まえの しゃしんを たたむ'],
   admApvSt:['許可リスト','きょか リスト'],
@@ -163,8 +171,12 @@ const T={
   admSaved:['保存しました','ほぞんしました'],admDeleted:['消しました','けしました'],
   admBad:['キーの形式が正しくありません','キーの けいしきが ただしく ありません'],
   admSrc:['前回の写真の取得元','ぜんかいの しゃしんの しゅとくもと'],
-  admLim:['写真を足す(1日)','しゃしんを たす(1にち)'],
-  admUsed:['今日足した写真','きょう たした しゃしん'],
+  admLim:['新しい猫(1日)','あたらしい ねこ(1にち)'],
+  admUsed:['今日出た新しい猫','きょう でた あたらしい ねこ'],
+  admInit:['解放を最初に戻す(テスト用)','かいほうを さいしょに もどす(テストよう)'],
+  admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
+  admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
+  admInitDone:['最初に戻しました','さいしょに もどしました'],
   admSrcNone:['まだ取得していません','まだ しゅとく していません'],
   admSrcFail:['取得できませんでした(サンプルのみ)','しゅとく できませんでした(サンプルのみ)'],
   admDb:['iPad内の保存場所','iPadないの ほぞんばしょ'],admDbOk:['使えます','つかえます'],admDbNg:['開けませんでした','ひらけませんでした'],
@@ -331,16 +343,18 @@ function renderPics(){
 /* ====== 猫の写真(許可リスト方式) ====== */
 // 管理者が確認して許可した写真だけを使う。一覧は同じサイトの approved.json(番号・アドレス・写真の中身の指紋 SHA-256)。
 // iPad は一覧の写真をまとめて読み込み、指紋が一致したものだけを iPad 内(IndexedDB 'apv')に保存する(取得元で差し替えられても出さない)。
-// 見せる写真は少しずつ増やす:最初に3枚、パズルをクリアするたびに1枚、「写真を足す」で1日3枚まで(管理用の設定で変更可)。
+// 見せる写真(出た猫)は少しずつ増やす:最初に6枚、数独をクリアするたびに1枚(1日2枚まで。管理用の設定で変更可)。番号の小さい順
 // 候補探し(The Cat API / cataas)は管理用の画面だけで使う
 const CAT_KEY='neko-catapi-key';
 const CAT_KEY_RE=/^[A-Za-z0-9_-]{8,100}$/;
 const TCA_IMG_RE=/^https:\/\/cdn2\.thecatapi\.com\/images\/[A-Za-z0-9_-]{1,40}\.(jpe?g|png)$/i;
 const CATAAS_ID_RE=/^[A-Za-z0-9_-]{6,40}$/;
 const CATAAS_IMG_RE=/^https:\/\/cataas\.com\/cat\/[A-Za-z0-9_-]{6,40}$/;
-const APV_URL='approved.json',APV_MAX=60,APV_ADM_MAX=50,APV_FIRST=3,APV_SHOW=6,HASH_RE=/^[0-9a-f]{64}$/;
+const APV_URL='approved.json',APV_MAX=60,APV_ADM_MAX=50,APV_FIRST=6,APV_SHOW=6,HASH_RE=/^[0-9a-f]{64}$/;
 const APV_OPEN_KEY='neko-apv-open',APV_BAD_KEY='neko-apv-bad',APV_NEW_KEY='neko-apv-new';
-const CAT_LIMIT_KEY='neko-apv-limit',CAT_QUOTA_KEY='neko-apv-quota',CAT_LIMIT_DEF=3,CAT_LIMIT_MAX=50;
+// 1日に出せる新しい猫(数独のクリアで1枚)。使わなかった分は持ち越さない
+const CAT_LIMIT_KEY='neko-sd-limit',CAT_QUOTA_KEY='neko-sd-quota',CAT_LIMIT_DEF=2,CAT_LIMIT_MAX=50;
+try{localStorage.removeItem('neko-apv-limit');localStorage.removeItem('neko-apv-quota');}catch(e){}
 let catItems=[],catState='idle',catGen=0,apvPool=[],apvList=null,apvNoSave=false,apvFold=true,apvLast=0;
 let apvStat={list:0,saved:0,bad:0,err:''};
 function catKey(){try{const k=localStorage.getItem(CAT_KEY)||'';return CAT_KEY_RE.test(k)?k:'';}catch(e){return '';}}
@@ -486,10 +500,37 @@ function apvUnlock(n){
   const op=apvOpen(),nw=apvNew();rest.forEach(o=>{op.push(o.no);nw.add(o.no);});
   apvOpenSave(op);apvNewSave(nw);apvRebuild();return rest.length;
 }
-// 見せる写真が3枚より少なければ3枚まで足す(最初・管理者が写真を外したとき)
+// 見せる写真が6枚より少なければ6枚まで足す(最初・管理者が写真を外したとき)
 function apvTopUp(){if(catItems.length<APV_FIRST)apvUnlock(APV_FIRST-catItems.length);}
-// パズルをクリアしたら1枚増やす
-function apvOnClear(){if(catState==='ok'&&apvUnlock(1)){renderAllPics();return true;}return false;}
+// 数独をクリアしたら、遊んだ新しい猫(始めたときに決めた番号)を出す。出せたら番号を返す
+function apvUnlockNo(no){
+  if(!no)return 0;
+  const op=apvOpen();if(op.includes(no))return 0;
+  const o=apvPool.find(x=>x.no===no);if(!o||catNg().includes(o.ou))return 0;
+  op.push(no);apvOpenSave(op);const nw=apvNew();nw.add(no);apvNewSave(nw);catUse();
+  apvRebuild();renderAllPics();return no;
+}
+// 数独の絵の決め方。new:まだ出ていない猫(番号の小さい順)、limit/none:出た猫からランダム、illust:イラストからランダム、wait:読み込み中
+function sdMode(){
+  if(catState!=='ok')return 'wait';
+  const rest=apvRest().length;
+  if(rest&&catLeft()>0)return 'new';
+  if(!catItems.length)return 'illust';
+  return rest?'limit':'none';
+}
+function sdPick(){
+  const m=sdMode(),rnd=a=>{const b=a.length>1&&sdItem?a.filter(x=>x!==sdItem):a;return b[Math.floor(Math.random()*b.length)];};
+  if(m==='new'){const o=apvRest()[0];return {item:o,nw:o.no};}
+  if(m==='limit'||m==='none')return {item:rnd(catItems),nw:0};
+  return {item:rnd(images.slice(0,SAMPLE_N)),nw:0};
+}
+// 最初の画面の数独のカード・数独の開始画面の案内
+function renderSdCard(){
+  const s=$('#sdCardS');if(!s)return;
+  const k=kana?'まい':'枚',rest=apvRest().length,left=catLeft();
+  s.textContent=catState!=='ok'?t('catLoading'):rest&&left>0?(kana?'きょうは あと '+left+k+' ・ まだ でていない ねこ '+rest+k:'今日あと'+left+k+' ・ まだ出ていない猫 '+rest+k):rest?t('sdcLimit'):t('sdcNone');
+  const m=sdMode();$('#sdPicMsg').textContent=t(m==='new'?'sdmNew':m==='limit'?'sdmLimit':m==='none'?'sdmNone':m==='illust'?'sdmIllust':'catLoading');
+}
 // 起動時:保存した写真を出し、許可リストを読み、まだ保存していない写真を読み込む
 async function initCats(){
   const gen=++catGen;apvLast=Date.now();
@@ -529,12 +570,6 @@ async function initCats(){
   }
   renderAllPics();
 }
-// 写真を足す(1日の上限あり)
-function catAddOne(){
-  if(catState!=='ok'||catLeft()<=0)return;
-  if(apvUnlock(1)){catUse();tone(880,0,.15,.08);selApi=0;selAlb=-1;}
-  renderAllPics();
-}
 // 選んだ写真を消す(確認のあと)。不適切な画像が紛れたとき用。消した写真は二度と出さない(猫の写真・ごほうびの絵の両方から消す)
 function catDelAsk(){const k=selApi;if(catState==='ok'&&catItems[k])delOpen('cat',k,catItems[k]);}
 function albDelAsk(){const k=selAlb;if(albItems[k])delOpen('alb',k,albItems[k]);}
@@ -568,17 +603,17 @@ $('#catDelNo').onclick=catDelClose;
 $('#catDelYes').onclick=catDelDo;
 $('#catDel').onclick=()=>{ensureAudio();catDelAsk();};
 $('#albDel').onclick=()=>{ensureAudio();albDelAsk();};
-$('#catMore').onclick=()=>{ensureAudio();catAddOne();};
 $('#catFold').onclick=()=>{apvFold=!apvFold;renderCatPics();};
 function renderCatPics(){
-  const box=$('#catPics'),msg=$('#catMsg'),btn=$('#catMore'),del=$('#catDel'),q=$('#catQuota'),fb=$('#catFold');box.replaceChildren();
+  const box=$('#catPics'),msg=$('#catMsg'),del=$('#catDel'),q=$('#catQuota'),fb=$('#catFold');box.replaceChildren();
   const show=catState==='ok';
   const empty=show&&!catItems.length;
   msg.classList.toggle('on',catState==='loading'||empty);
   msg.textContent=catState==='loading'?t('catLoading'):empty?t('apvNone'):'';
   $('#catCredit').style.display=show&&catItems.length?'':'none';
-  $('#catBtns').style.display=show&&(catItems.length||apvRest().length)?'':'none';
-  q.style.display=show&&(catItems.length||apvRest().length)?'':'none';
+  $('#catBtns').style.display=show&&catItems.length?'':'none';
+  q.style.display=show?'':'none';
+  renderSdCard();
   if(catState==='loading'){
     for(let i=0;i<APV_FIRST;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
     fb.style.display='none';return;
@@ -599,17 +634,9 @@ function renderCatPics(){
   fb.style.display=more>0?'':'none';
   fb.textContent=apvFold?t('apvOpen1')+(kana?' ('+more+'まい)':'('+more+'枚)'):t('apvClose');
   if(!show)return;
-  const left=catLeft(),rest=apvRest().length,noSel=selApi<0||!catItems[selApi];
-  btn.textContent=t('apvAdd');
-  btn.disabled=left<=0||!rest;
   del.textContent=t('catDel');
-  del.disabled=noSel;
-  const parts=[];
-  if(!rest)parts.push(t('apvNoMore'));
-  else if(left<=0)parts.push(t('apvAddDone'));
-  else parts.push(kana?'(きょうは あと '+left+'まい)':'(今日はあと'+left+'枚)');
-  parts.push(t('apvClearHelp'));
-  q.textContent=parts.join(' ');
+  del.disabled=selApi<0||!catItems[selApi];
+  q.textContent=t('apvClearHelp');
 }
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:selAlb>=0&&albItems[selAlb]?albItems[selAlb]:images[selPic];
 function renderAllPics(){renderCatPics();renderAlb();renderPics();}
@@ -617,12 +644,12 @@ function renderAllPics(){renderCatPics();renderAlb();renderPics();}
 function renderSel(){
   if(typeof albItems==='undefined')return;
   const it=curItem(),u=safeImgUrl(it&&it.url);
-  ['#mSelImg','#jgSelImg','#sdSelImg'].forEach(q=>{const e=$(q);if(e&&e.getAttribute('src')!==u)e.src=u;});
+  ['#mSelImg','#jgSelImg'].forEach(q=>{const e=$(q);if(e&&e.getAttribute('src')!==u)e.src=u;});
   $('#jgSelImg').classList.toggle('flip',selFlip);
   $('#picZoom').disabled=selApi>=0||selAlb>=0;
   // 写真そのものを保存できなかった猫の写真は、ごほうびの絵に入らない(遊ぶ前に知らせる)
   const ng=!!(it&&it.api&&!it.wait&&!(it.blob instanceof Blob));
-  $('#jgNoGift').style.display=ng?'':'none';$('#sdNoGift').style.display=ng?'':'none';
+  $('#jgNoGift').style.display=ng?'':'none';$('#sdNoGift').style.display='none';
   $('#jgNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftJg');
   $('#sdNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftSd');
 }
@@ -703,6 +730,7 @@ $('#albZoom').onclick=()=>{ensureAudio();if(selAlb>=0)zoomOpen(albItems[selAlb])
 /* ====== ごほうびの絵(クリアした猫の写真。iPad内の IndexedDB 'album' に保存) ====== */
 // {v:1, list:[{id, src, ou, blob:JPEG, at:ms}]}。新しい順。100枚まで(超えたら古いものから消える)
 const ALB_MAX=100,ALB_ID=/^[a-z0-9]{4,24}$/;
+const ALB_OFF=true; // 2026-11-16:ごほうびの絵の一覧はやめた(段階2で🎁の印にする)
 let albItems=[],albReady=false; // albReady:保存を読めた(読めていないときは上書きしない)
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const catMetaOk=m=>!!m&&typeof m==='object'&&((m.src==='thecatapi'&&TCA_IMG_RE.test(m.ou))||(m.src==='cataas'&&CATAAS_IMG_RE.test(m.ou)));
@@ -712,6 +740,7 @@ function albSave(){
   jgQueue(()=>idbPut('album',{v:1,list}));
 }
 async function albLoad(){
+  if(ALB_OFF){albItems=[];albReady=true;jgQueue(()=>idbDel('album'));renderAlb();return;}
   const o=await jgQueue(()=>idbGet('album'));
   if(o===IDB_ERR){renderAlb();return;}
   albReady=true;
@@ -735,6 +764,7 @@ async function albAddSafe(item){
 }
 // 猫の写真以外・もう入っている写真は入れない
 function albAdd(item){
+  if(ALB_OFF)return false;
   if(!item||!catMetaOk(item)||!(item.blob instanceof Blob)||item.blob.type!=='image/jpeg')return false;
   if(catNg().includes(item.ou)||albItems.some(o=>o.ou===item.ou))return false;
   const cur=selAlb>=0?albItems[selAlb]:null;
@@ -1152,7 +1182,7 @@ function finish(){
   jgPause();playing=false;finished=true;
   const sec=Math.floor(jgElapsed());
   jgCanSave=false;jgClear();jgContData=null;
-  recordPlay('jigsaw');apvOnClear();
+  recordPlay('jigsaw');
   setTimeout(()=>{drawBoard();pieces.forEach(p=>p.el.style.opacity=0);sndDone();},350);
   lastSec=sec;$('#doneMsg').textContent=doneText(sec);
   $('#doneGift').style.display='none';
@@ -1406,7 +1436,7 @@ document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');render
 // 読み込めていない写真では遊べない(読み直しを試す)
 function picNotReady(){const it=curItem();if(!it||!it.wait)return false;toast('catNotReady',3200);return true;}
 $('#gJigBtn').onclick=()=>{ensureAudio();if(picNotReady())return;renderSel();show('start');$('#start').scrollTop=0;};
-$('#gSdBtn').onclick=()=>{ensureAudio();if(picNotReady())return;renderSel();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
+$('#sdCard').onclick=()=>{ensureAudio();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
 // 「続きから」があるときは「新しく始める」の見出しを出す
 function renderMenuNew(){$('#menuHNew').style.display=$('#jgCont').style.display!=='none'||$('#sdCont').style.display!=='none'?'':'none';}
 let toastT=null;
@@ -1500,7 +1530,7 @@ function sdSaveOpt(){try{localStorage.setItem(SD_OPT,JSON.stringify({v:2,err:sdO
 const sdElapsed=()=>sd?sd.el+(sdT0?(Date.now()-sdT0)/1000:0):0;
 function sdSave(){
   if(!sd)return;
-  try{localStorage.setItem(SD_KEY,JSON.stringify({v:1,lv:sd.lv,giv:sd.giv.join(''),sol:sd.sol.join(''),cur:sd.cur.join(''),hint:sd.hint.join(''),memo:sd.memo,el:Math.floor(sdElapsed()),rid:sd.rid||'',img:sd.img||'',rv:sd.rv||0}));}catch(e){}
+  try{localStorage.setItem(SD_KEY,JSON.stringify({v:1,lv:sd.lv,giv:sd.giv.join(''),sol:sd.sol.join(''),cur:sd.cur.join(''),hint:sd.hint.join(''),memo:sd.memo,el:Math.floor(sdElapsed()),rid:sd.rid||'',img:sd.img||'',rv:sd.rv||0,nw:sd.nw||0}));}catch(e){}
 }
 // 保存データは形式を確かめてから使う
 function sdLoad(){
@@ -1516,7 +1546,9 @@ function sdLoad(){
     // img:絵の記録の id(IndexedDB 'sudoku-img')、rv:絵を見せた3×3(ビット)。古い保存にはないので省略可
     const img=typeof o.img==='string'&&SD_RID.test(o.img)?o.img:'';
     const rv=Number.isInteger(o.rv)&&o.rv>=0&&o.rv<512?o.rv:0;
-    return {lv:o.lv,giv,sol,cur,hint,memo:o.memo.slice(),el:Math.min(o.el,360000),rid,img,rv};
+    // nw:新しい猫の番号(クリアすると出る。0=出た猫・イラストで遊んでいる)
+    const nw=Number.isInteger(o.nw)&&o.nw>=1&&o.nw<=99999?o.nw:0;
+    return {lv:o.lv,giv,sol,cur,hint,memo:o.memo.slice(),el:Math.min(o.el,360000),rid,img,rv,nw};
   }catch(e){return null;}
 }
 function sdClearSave(){try{localStorage.removeItem(SD_KEY);}catch(e){}jgQueue(()=>idbDel('sudoku-img'));}
@@ -1615,16 +1647,17 @@ function sdRenderRecs(){
 }
 // 記録のある問題を最初から遊ぶ(途中の問題があれば確認)
 function sdStartRec(id){
+  if(sdMode()==='wait'){toast('catLoading',2600);return;}
   if(sdLoad()){sdPending=()=>sdPlayRec(id);$('#sdNewOv').classList.add('on');}
   else sdPlayRec(id);
 }
-function sdPlayRec(id,item){
+function sdPlayRec(id){
   const r=sdRecsLoad().find(x=>x.id===id);if(!r){sdRenderStart();return;}
-  item=item||curItem();sdSetPic(item);
+  const pk=sdPick(),item=pk.item;sdSetPic(item);
   qpClose();lpCancel();hideToast();
   sdPlaying=false;clearInterval(sdTimer);sdT0=0;sdClearSave();
   const giv=[...r.giv].map(Number);
-  sd={lv:r.lv,giv,sol:[...r.sol].map(Number),cur:giv.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rid:r.id,rv:0};
+  sd={lv:r.lv,giv,sol:[...r.sol].map(Number),cur:giv.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rid:r.id,rv:0,nw:pk.nw};
   sdPicRec(item);
   show('sdPlay');requestAnimationFrame(()=>sdBegin());
 }
@@ -1811,16 +1844,16 @@ function sdBegin(){
   sdSel=sd.cur.findIndex(v=>!v);sdPlaying=true;sdLastSec=null;
   sdLayout();sdDraw();sdResume();sdSave();
 }
-function sdNew(lv,item){
+function sdNew(lv){
   qpClose();lpCancel();
-  item=item||curItem();sdSetPic(item);
+  const pk=sdPick(),item=pk.item;sdSetPic(item);
   sdPlaying=false;clearInterval(sdTimer);sdT0=0;sd=null;sdClearSave();
   sdCells.forEach(C=>{C.el.className=C.el.className.replace(/\b(giv|hn|wrong|sel|peer|same|flash|rv)\b/g,'').trim();C.v.textContent='';C.mm.style.display='none';});
   $('#sdLeft').textContent='81';$('#sdTime').textContent='0:00';
   show('sdPlay');requestAnimationFrame(sdLayout);toast('sdMaking');
   setTimeout(()=>{
     const p=sdMake(lv);
-    sd={lv,giv:p.g.slice(),sol:p.sol,cur:p.g.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rv:0};
+    sd={lv,giv:p.g.slice(),sol:p.sol,cur:p.g.slice(),memo:Array(81).fill(0),hint:Array(81).fill(0),el:0,rv:0,nw:pk.nw};
     sdPicRec(item);
     hideToast();
     if($('#sdPlay').classList.contains('on'))sdBegin();else{sdSave();sdRenderStart();}
@@ -1836,16 +1869,19 @@ async function sdContinue(){
 function sdFinish(){
   qpClose();lpCancel();
   sdPlaying=false;const sec=Math.floor(sdElapsed());sdT0=0;clearInterval(sdTimer);
-  sdClearSave();recordPlay('sudoku');apvOnClear();sdRecordClear(sec);
+  sdClearSave();recordPlay('sudoku');sdNewNo=apvUnlockNo(sd.nw);sdRecordClear(sec);
   sd.rv=511;sdSel=-1;sdDraw();sndDone();
   if(sdDoneRec&&sdDoneRec.newRec)[1047,1319,1568,2093].forEach((f,i)=>tone(f,1.0+i*.12,.5,.14));
   sdLastSec=sec;$('#sdDoneMsg').textContent=doneText(sec);sdRenderDone();
-  $('#sdGift').style.display='none';
-  albAddSafe(sdItem).then(g=>{$('#sdGift').style.display=g?'':'none';});
+  $('#sdGift').style.display='none';sdNewCatPaint();
+  if(sdNewNo)[784,988,1175].forEach((f,i)=>tone(f,1.6+i*.14,.35,.12));
   donePrep(sdItem,'#sdSave');
   setTimeout(()=>$('#sdDoneOv').classList.add('on'),900);
 }
-// 最初の画面の数独の「続きから」(絵の小さな画像つき)
+// クリアで出た新しい猫の知らせ
+let sdNewNo=0;
+function sdNewCatPaint(){const e=$('#sdNewCat');e.style.display=sdNewNo?'':'none';e.textContent=sdNewNo?t('sdNewCat')+(kana?'('+sdNewNo+'ばん)':'('+sdNewNo+'番)'):'';}
+// 最初の画面の数独の「続きから」(絵の小さな画像つき。新しい猫のときは「?」にして中身を見せない)
 let sdThumbUrl=null,sdContGen=0;
 async function renderSdCont(){
   const gen=++sdContGen,sv=sdLoad(),cb=$('#sdCont');
@@ -1854,7 +1890,7 @@ async function renderSdCont(){
   if(sdThumbUrl){URL.revokeObjectURL(sdThumbUrl);sdThumbUrl=null;}
   if(!sv){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
   if(im&&im!==IDB_ERR&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
-  const pic=mk('img');pic.alt='';pic.src=safeImgUrl(src);
+  let pic;if(sv.nw)pic=mk('span','qm','?');else{pic=mk('img');pic.alt='';pic.src=safeImgUrl(src);}
   const tx=mk('span','ctx');tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🔢 '+t('gSd')+' ・ '+t('s'+sv.lv)+' ・ ⏱ '+fmt(Math.floor(sv.el))));
   cb.replaceChildren(pic,tx);cb.style.display='';renderMenuNew();
 }
@@ -1866,21 +1902,21 @@ function sdRenderStart(){
     b.onclick=()=>{sdSelLv=k;sdSaveOpt();sdRenderStart();};
     box.appendChild(b);
   });
-  sdRenderRecs();
+  sdRenderRecs();renderSdCard();
 }
 function sdApplyLang(){
   sdRenderStart();renderSdCont();
   if(sdLastSec!=null)$('#sdDoneMsg').textContent=doneText(sdLastSec);
   setTg($('#sdMemoBtn'),sdMemoMode);
-  sdRenderDone();
+  sdRenderDone();sdNewCatPaint();
 }
 $('#sdCont').onclick=()=>{ensureAudio();sdContinue();};
-$('#sdGo').onclick=()=>{ensureAudio();if(sdLoad()){sdPending=null;$('#sdNewOv').classList.add('on');}else sdNew(sdSelLv);};
+$('#sdGo').onclick=()=>{ensureAudio();if(sdMode()==='wait'){toast('catLoading',2600);return;}if(sdLoad()){sdPending=null;$('#sdNewOv').classList.add('on');}else sdNew(sdSelLv);};
 $('#sdPicBtn').onclick=sdShowPic;
 $('#sdNewOv').onclick=e=>{if(e.target.id==='sdNewOv'){sdPending=null;$('#sdNewOv').classList.remove('on');}};
 $('#sdNewNo').onclick=()=>{sdPending=null;$('#sdNewOv').classList.remove('on');sdContinue();};
 $('#sdNewYes').onclick=()=>{$('#sdNewOv').classList.remove('on');const f=sdPending;sdPending=null;if(f)f();else sdNew(sdSelLv);};
-$('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id,sdItem);};
+$('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id);};
 $('#sdFavBtn').onclick=()=>{if(sdDoneRec&&sdToggleFav(sdDoneRec.id))sdRenderDone();};
 // 戻る:途中は自動で保存されるので、確認なしで戻る(次は「続きから」で再開)
 $('#sdBackBtn').onclick=()=>{qpClose();lpCancel();if(sdPlaying)sdPause();sdPlaying=false;hideToast();show('menu');renderSdCont();};
@@ -1893,7 +1929,7 @@ $('#sdSetClose').onclick=()=>$('#sdSetOv').classList.remove('on');
 $('#sdErrBtn').onclick=e=>{sdOpt.err=!sdOpt.err;setTg(e.currentTarget,sdOpt.err);sdSaveOpt();sdDraw();};
 $('#sdSameBtn').onclick=e=>{sdOpt.same=!sdOpt.same;setTg(e.currentTarget,sdOpt.same);sdSaveOpt();sdDraw();};
 $('#sdSoundBtn').onclick=e=>{soundOn=!soundOn;ensureAudio();setTg(e.currentTarget,soundOn);};
-$('#sdAgainBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdNew(sd?sd.lv:sdSelLv,sdItem);};
+$('#sdAgainBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdNew(sd?sd.lv:sdSelLv);};
 $('#sdOtherBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdRenderStart();show('sdStart');};
 // 画面を離れたら時間を止めて保存する
 document.addEventListener('visibilitychange',()=>{
@@ -1935,13 +1971,14 @@ function admRender(msgKey){
   $('#admDb').textContent=t('admDb')+':'+(idbDiag.ok?t('admDbOk'):t('admDbNg'))+(idbDiag.fails?(kana?'(ひらけなかった かいすう '+idbDiag.fails+' '+idbDiag.last+')':'(開けなかった回数 '+idbDiag.fails+' '+idbDiag.last+')'):'')
     +' ・ '+(kana?'ごほうび '+albItems.length+'まい':'ごほうび'+albItems.length+'枚')+(apvNoSave?(kana?'・しゃしんは ほぞん していません':'・写真は保存していません'):'');
   setTg($('#admTest'),testOn());
+  if(Date.now()-admInitAt>4000)$('#admInit').textContent=t('admInit');
 }
 // 長押しのあと、確認してから開く(「開かない」を大きく、「開く」は下に離して小さく。外側タップは閉じる)
 function admAsk(){ensureAudio();tone(660,0,.15,.08);$('#admAskOv').classList.add('on');}
 $('#admAskOv').onclick=e=>{if(e.target.id==='admAskOv')$('#admAskOv').classList.remove('on');};
 $('#admAskNo').onclick=()=>$('#admAskOv').classList.remove('on');
 $('#admAskYes').onclick=()=>{$('#admAskOv').classList.remove('on');admOpen();};
-function admOpen(){$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
+function admOpen(){admInitAt=0;$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
 function admAfterChange(){renderCatPics();}
 function admSetLimit(d){
   const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
@@ -1951,6 +1988,14 @@ function admSetLimit(d){
 $('#admLimDn').onclick=()=>admSetLimit(-1);
 $('#admLimUp').onclick=()=>admSetLimit(1);
 $('#admReset').onclick=()=>{catUseReset();admRender('');renderCatPics();};
+// テスト用:出た猫を最初の6枚に・今日の数を0に・消した写真を元に戻す(2回押す)
+let admInitAt=0;
+$('#admInit').onclick=()=>{
+  if(Date.now()-admInitAt>4000){admInitAt=Date.now();$('#admInit').textContent=t('admInit2');return;}
+  admInitAt=0;
+  try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,CAT_NG_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
+  selApi=-1;apvRebuild();apvTopUp();renderAllPics();renderSel();admRender('admInitDone');
+};
 $('#admSave').onclick=()=>{
   const v=String($('#admKey').value||'').trim();
   if(!CAT_KEY_RE.test(v)){admRender('admBad');return;}
