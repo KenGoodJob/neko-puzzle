@@ -37,7 +37,25 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .zhint{color:#fff;font-size:19px;margin:0;opacity:.9;text-align:center}
 .kana .zhint{word-break:keep-all;overflow-wrap:anywhere}
 /* 長押しで「写真に追加」できるように */
-#zoomImg,#sdCat{-webkit-touch-callout:default;pointer-events:auto}
+#zoomImg,#sdCat,#doneImg{-webkit-touch-callout:default;pointer-events:auto}
+/* 遊ぶ前の案内:ごほうびの絵に入らない写真 */
+.noGift{width:100%;max-width:980px;margin:12px 0 0;font-size:21px;line-height:1.45;color:#7A4A00;background:#FFF6D6;border:3px solid #E8C860;border-radius:16px;padding:10px 16px}
+.kana .noGift{word-break:keep-all;overflow-wrap:anywhere}
+/* 読み込めなかった猫の写真の枠 */
+.pic.ng .ph{aspect-ratio:1/1;border-radius:12px;background:#F3E7D6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:18px;color:var(--sub);padding:6px}
+.pic.ng .ph small{font-size:17px;color:var(--pri-d);font-weight:bold}
+.kana .pic.ng .ph{word-break:keep-all;overflow-wrap:anywhere}
+/* ジグソーの完成画面の絵 */
+#doneImg{width:min(300px,55vw,30vh,max(140px,calc(100vh - 560px)));aspect-ratio:1/1;border-radius:20px;border:6px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.2);display:block;margin:0 auto 6px;object-fit:cover;background:#eee}
+#doneOv .dlg{padding-top:22px;padding-bottom:22px}
+#doneOv .dlg h3{margin:4px 0 4px}
+#doneOv .dlg p{margin:4px 0 14px}
+/* 完成画面:長押しで保存の案内(絵のすぐ下) */
+.dlg p.lphint{font-size:18px;margin:0 0 6px;color:var(--sub);line-height:1.35}
+.dlg p.lphint.only{color:#7A4A00;background:#FFF6D6;border-radius:14px;padding:6px 10px;font-weight:bold}
+.kana .dlg p.lphint{word-break:keep-all;overflow-wrap:anywhere}
+#doneOv .dlg p.lphint,#sdDoneOv .dlg p.lphint{margin:0 0 4px}
+@media (max-height:860px){.dlg p.lphint{font-size:16px}#sdDoneOv .dlg p.lphint{font-size:15px;margin-bottom:2px}#sdCat{margin-bottom:4px}#sdDoneOv .dlg p{margin-bottom:12px}}
 .bb.sv{margin-top:18px;min-height:64px;font-size:22px;min-width:300px}
 .dlg p.sguide{font-size:18px;margin:8px 0 0;color:var(--sub)}
 .kana .dlg p.sguide{word-break:keep-all;overflow-wrap:anywhere}
@@ -316,6 +334,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
   <h1>🧩 <span data-t="gJig">ジグソーパズル</span></h1>
   <div class="usePic"><img id="jgSelImg" alt=""><span data-t="usePic">この絵で遊びます</span></div>
+  <p class="noGift" id="jgNoGift" style="display:none"></p>
   <h2 data-t="hCnt">① ピースの数</h2>
   <div class="counts" id="counts"></div>
   <h2 data-t="hRot">② ピースの向き</h2>
@@ -349,6 +368,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
   <h1>🔢 <span data-t="gSd">数独</span></h1>
   <div class="usePic"><img id="sdSelImg" alt=""><span data-t="usePicSd">3×3がそろうと、この絵が見えてきます</span></div>
+  <p class="noGift" id="sdNoGift" style="display:none"></p>
   <h2 data-t="sdHLv">難しさ</h2>
   <div class="counts" id="sdLvs"></div>
   <button class="go" id="sdGo" data-t="go">始める</button>
@@ -451,8 +471,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 </div></div>
 
 <div class="ov" id="doneOv"><div class="dlg">
-  <div class="big">🎉</div>
-  <h3 data-t="done">完成!</h3>
+  <img id="doneImg" alt="">
+  <p class="lphint" id="doneLp"></p>
+  <h3>🎉 <span data-t="done">完成!</span></h3>
   <p id="doneMsg">よくできました</p>
   <p class="gift" id="doneGift" style="display:none" data-t="gift">🎁 ごほうびの絵に入れました</p>
   <div class="row">
@@ -465,6 +486,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 
 <div class="ov" id="sdDoneOv"><div class="dlg">
   <img id="sdCat" alt="">
+  <p class="lphint" id="sdLp"></p>
   <div class="newrec" id="sdNewRec" style="display:none" data-t="sdNewRec">🏆 新記録!</div>
   <h3>🎉 <span data-t="done">完成!</span></h3>
   <p id="sdDoneMsg">よくできました</p>
@@ -499,6 +521,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115161640"></script>
+<script src="app.js?v=20261115164951"></script>
 </body>
 </html>

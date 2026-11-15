@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115161640';
+const APP_VERSION='20261115164951';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -78,6 +78,15 @@ const T={
   catRepDone:['今日の入れ替えはここまでです。明日また入れ替えられます','きょうの いれかえは ここまで です。あした また いれかえられます'],
   catRepFail:['写真を入れ替えられませんでした','しゃしんを いれかえられませんでした'],
   catWait:['読み込み中…','よみこみちゅう…'],
+  catNg1:['読み込めませんでした','よみこめませんでした'],
+  catNg2:['タップで読み直す','タップで よみなおす'],
+  catNotReady:['この写真はまだ読み込めていません。少し待つか、別の絵を選んでください','この しゃしんは まだ よみこめていません。すこし まつか、べつの えを えらんでください'],
+  // 写真そのものを保存できない写真(取得元が持ち出しを許可していない)
+  noGift:['この写真は、クリアしても「ごほうびの絵」に入りません。完成画面で絵を長押しすると、写真アプリに保存できます。','この しゃしんは、クリアしても「ごほうびの え」に はいりません。かんせい がめんで えを ながおしすると、しゃしん アプリに ほぞん できます。'],
+  noGiftSd:['途中でやめて「続きから」で遊ぶと、絵はイラストに変わります','とちゅうで やめて「つづきから」で あそぶと、えは イラストに かわります'],
+  noGiftJg:['途中でやめると、続きは残りません','とちゅうで やめると、つづきは のこりません'],
+  lpHint:['絵を長押しして「写真に追加」でも保存できます','えを ながおしして「しゃしんに ついか」でも ほぞん できます'],
+  lpOnly:['この写真は、絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります(ごほうびの絵には入りません)','この しゃしんは、えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります(ごほうびの えには はいりません)'],
   catLoading:['猫の写真を読み込んでいます。少しお待ちください','ねこの しゃしんを よみこんでいます。すこし おまちください'],
   catCredit:['写真:The Cat API / cataas','しゃしん:The Cat API / cataas'],
   hFlip:['③ 絵の向き','③ えの むき'],
@@ -436,9 +445,28 @@ async function catLoadSaved(){
     // 保存した写真が読めないときは、同じ写真をアドレスから読み直す(別の写真には替えない)
     if(e.blob){const u=URL.createObjectURL(e.blob);return loadImg(u).ready.then(img=>({api:true,src:e.src,ou:e.ou,blob:e.blob,url:u,img,ready:Promise.resolve(img)}),
       ()=>{URL.revokeObjectURL(u);return loadCatImg(e.ou).then(img=>catMakeItem(e.src,e.ou,img));});}
-    return loadCatImg(e.ou).then(img=>({api:true,src:e.src,ou:e.ou,blob:null,url:e.ou,img,ready:Promise.resolve(img)}));
+    // アドレスだけの写真:読めたら、持ち出しが許可されていれば写真そのものも作る(次からは通信なしで出せる)
+    return loadCatImg(e.ou).then(img=>catMakeItem(e.src,e.ou,img));
   }));
-  return rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  // 読めなかった写真も外さない(ほかの写真で埋めて上書きしない)。「読み込めませんでした」の枠にして、あとで読み直す
+  const out=rs.map((r,i)=>r.status==='fulfilled'?r.value:catWaitItem(ok[i].src,ok[i].ou));
+  return out;
+}
+// 読み込めなかった写真の枠(遊べない。タップで読み直す)
+function catWaitItem(src,ou){
+  const r=Promise.reject(new Error('wait'));r.catch(()=>{});
+  return {api:true,src,ou,blob:null,url:ou,img:null,ready:r,wait:true};
+}
+// k番の読み込めなかった写真を読み直す(入れ替えの上限には数えない)
+const catRetrying=new Set();
+async function catRetry(k){
+  const o=catItems[k];if(!o||!o.wait||catRetrying.has(k))return;
+  const gen=catGen;catRetrying.add(k);renderCatPics();
+  let it=null;try{it=await catMakeItem(o.src,o.ou,await loadCatImg(o.ou));}catch(e){}
+  catRetrying.delete(k);
+  if(gen!==catGen||catItems[k]!==o)return;
+  if(it){catItems[k]=it;catSaveAll();}
+  renderAllPics();
 }
 const catUrls=()=>new Set(catItems.filter(Boolean).map(o=>o.ou));
 // 開始画面を初めて開いたとき:保存した写真を出し、6枚に足りなければ足りない分だけ取る(上限には数えない。消した空き枠は除く)
@@ -458,6 +486,8 @@ async function initCats(){
   catItems=items;catState=items.length?'ok':'fail';
   if(items.length)catSaveAll();
   renderCatPics();renderPics();
+  // 読み込めなかった写真は、少し待ってから1回だけ自動で読み直す
+  if(items.some(o=>o&&o.wait))setTimeout(()=>{if(gen===catGen)catItems.forEach((o,k)=>{if(o&&o.wait)catRetry(k);});},8000);
 }
 // k番の枠に新しい1枚を入れる(入れ替え・空き枠に足す)。うまくいったときだけ上限に数える。失敗したら元のまま
 async function catFill(k){
@@ -538,6 +568,16 @@ function renderCatPics(){
       box.appendChild(d);return;
     }
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
+    if(o.wait){
+      // 読み込めなかった写真:タップで読み直す(選んでおけば入れ替え・削除もできる)
+      d.classList.add('ng');
+      const ph=mk('div','ph');
+      if(catRetrying.has(k))ph.append(mk('span',null,t('catWait')));
+      else ph.append(mk('span',null,t('catNg1')),mk('small',null,t('catNg2')));
+      d.appendChild(ph);
+      d.onclick=()=>{if(catBusy>=0)return;ensureAudio();selApi=k;selAlb=-1;renderAllPics();catRetry(k);};
+      box.appendChild(d);return;
+    }
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     d.appendChild(im);
     d.onclick=()=>{if(catBusy>=0)return;selApi=k;selAlb=-1;renderAllPics();};
@@ -565,6 +605,11 @@ function renderSel(){
   ['#mSelImg','#jgSelImg','#sdSelImg'].forEach(q=>{const e=$(q);if(e&&e.getAttribute('src')!==u)e.src=u;});
   $('#jgSelImg').classList.toggle('flip',selFlip);
   $('#picZoom').disabled=selApi>=0||selAlb>=0;
+  // 写真そのものを保存できなかった猫の写真は、ごほうびの絵に入らない(遊ぶ前に知らせる)
+  const ng=!!(it&&it.api&&!it.wait&&!(it.blob instanceof Blob));
+  $('#jgNoGift').style.display=ng?'':'none';$('#sdNoGift').style.display=ng?'':'none';
+  $('#jgNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftJg');
+  $('#sdNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftSd');
 }
 /* ====== iPad本体(写真アプリ)への保存 ====== */
 // 正方形のJPEGにして、共有の画面(「画像を保存」で写真アプリへ)を開く。共有できない端末ではダウンロード。
@@ -594,10 +639,23 @@ function sharePic(file){
   setTimeout(()=>URL.revokeObjectURL(u),20000);
 }
 // 完成画面の保存ボタン:作れたら押せる、作れなければ隠す
-const doneFiles={};
+// 完成画面には遊んだ絵を元の向きで出す。長押し →「写真に追加」でも保存できるよう、作ったJPEGに差し替える
+// (写真そのものを作れない猫の写真は、取得元の写真のまま出す。長押しでの保存はできる)
+const doneFiles={},doneUrls={},DONE_PIC={'#doneSave':['#doneImg','#doneLp'],'#sdSave':['#sdCat','#sdLp']};
 function donePrep(item,sel){
-  const b=$(sel),g=$(sel+'G'),tok={};doneFiles[sel]=tok;b.disabled=true;b.style.display='';g.style.display='';
-  picFile(item).then(f=>{if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;if(f)b.disabled=false;else{b.style.display='none';g.style.display='none';}});
+  const b=$(sel),g=$(sel+'G'),im=$(DONE_PIC[sel][0]),lp=$(DONE_PIC[sel][1]),tok={};
+  doneFiles[sel]=tok;b.disabled=true;b.style.display='';g.style.display='';
+  if(doneUrls[sel]){URL.revokeObjectURL(doneUrls[sel]);doneUrls[sel]=null;}
+  im.src=safeImgUrl(item?item.url:images[0].url);
+  lp.className='lphint';lp.dataset.k='lpHint';lp.textContent=t('lpHint');
+  picFile(item).then(f=>{
+    if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;
+    if(f){b.disabled=false;const u=URL.createObjectURL(f);doneUrls[sel]=u;im.src=u;}
+    else{
+      b.style.display='none';g.style.display='none';
+      if(item&&item.api){lp.dataset.k='lpOnly';lp.textContent=t('lpOnly');lp.classList.add('only');}
+    }
+  });
 }
 $('#doneSave').onclick=()=>{ensureAudio();const f=doneFiles['#doneSave'];if(f instanceof File)sharePic(f);};
 $('#sdSave').onclick=()=>{ensureAudio();const f=doneFiles['#sdSave'];if(f instanceof File)sharePic(f);};
@@ -721,6 +779,7 @@ function applyLang(){
   document.querySelectorAll('.lgb').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===kana));
   renderPics();renderCatPics();renderAlb();renderCounts();renderRots();renderFlips();
   if(lastSec!=null)$('#doneMsg').textContent=doneText(lastSec);
+  document.querySelectorAll('.lphint').forEach(e=>{if(e.dataset.k)e.textContent=t(e.dataset.k);});
   if(window.SD_READY)sdApplyLang();
   if(window.JG_READY)renderJgCont();
   if(window.UPD_READY)renderUpd();
@@ -1325,8 +1384,10 @@ window.JG_READY=true;
 
 /* ====== 最初の画面(絵を選ぶ → 遊ぶパズルを選ぶ) ====== */
 document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');renderJgCont();if(window.SD_READY)renderSdCont();};});
-$('#gJigBtn').onclick=()=>{ensureAudio();renderSel();show('start');$('#start').scrollTop=0;};
-$('#gSdBtn').onclick=()=>{ensureAudio();renderSel();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
+// 読み込めていない写真では遊べない(読み直しを試す)
+function picNotReady(){const it=curItem();if(!it||!it.wait)return false;toast('catNotReady',3200);if(selApi>=0)catRetry(selApi);return true;}
+$('#gJigBtn').onclick=()=>{ensureAudio();if(picNotReady())return;renderSel();show('start');$('#start').scrollTop=0;};
+$('#gSdBtn').onclick=()=>{ensureAudio();if(picNotReady())return;renderSel();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
 // 「続きから」があるときは「新しく始める」の見出しを出す
 function renderMenuNew(){$('#menuHNew').style.display=$('#jgCont').style.display!=='none'||$('#sdCont').style.display!=='none'?'':'none';}
 let toastT=null;
@@ -1760,7 +1821,6 @@ function sdFinish(){
   sd.rv=511;sdSel=-1;sdDraw();sndDone();
   if(sdDoneRec&&sdDoneRec.newRec)[1047,1319,1568,2093].forEach((f,i)=>tone(f,1.0+i*.12,.5,.14));
   sdLastSec=sec;$('#sdDoneMsg').textContent=doneText(sec);sdRenderDone();
-  $('#sdCat').src=safeImgUrl(sdItem?sdItem.url:images[0].url);
   $('#sdGift').style.display='none';
   albAddSafe(sdItem).then(g=>{$('#sdGift').style.display=g?'':'none';});
   donePrep(sdItem,'#sdSave');
