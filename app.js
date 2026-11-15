@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261115155017';
+const APP_VERSION='20261115161640';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -17,7 +17,8 @@ const T={
   hAlb:['🎁 ごほうびの絵','🎁 ごほうびの え'],
   albEmpty:['猫の写真のパズルをクリアすると、ここに入ります','ねこの しゃしんの パズルを クリアすると、ここに はいります'],
   albDel:['🗑 この絵を消す','🗑 この えを けす'],
-  albDelP:['ごほうびの絵から消えます。消した写真は、もう出てきません','ごほうびの えから きえます。けした しゃしんは、もう でてきません'],
+  albDelP:['ごほうびの絵から消えます(また同じ写真でクリアすると、もう一度入ります)','ごほうびの えから きえます(また おなじ しゃしんで クリアすると、もういちど はいります)'],
+  saveGuide:['押したあとの画面で「画像を保存」を選ぶと、写真アプリに入ります','おした あとの がめんで「がぞうを ほぞん」を えらぶと、しゃしん アプリに はいります'],
   gift:['🎁 ごほうびの絵に入れました','🎁 ごほうびの えに いれました'],
   usePicSd:['3×3の9マスを埋めて「🐱 絵を見る」を押すと、この絵が見えてきます','3×3の 9マスを うめて「🐱 えを みる」を おすと、この えが みえてきます'],
   sdPicBtn:['🐱 絵を見る','🐱 えを みる'],
@@ -488,7 +489,14 @@ function catDelDo(){
   const o=tp==='alb'?albItems[k]:catItems[k];
   catDelClose();
   if(!o||(tp==='alb'?k!==selAlb:(catBusy>=0||k!==selApi)))return;
-  const ou=o.ou;catNgAdd(ou);
+  const ou=o.ou;
+  // ごほうびの絵から消すのは整理のため:その1枚だけ消す(出さない一覧には入れない。猫の写真はそのまま)
+  if(tp==='alb'){
+    URL.revokeObjectURL(o.url);albItems.splice(k,1);selAlb=-1;albSave();
+    toast('catDelDone',2000);renderAllPics();return;
+  }
+  // 猫の写真から消すのは不適切な画像のため:出さない一覧に入れ、ごほうびの絵からも消す
+  catNgAdd(ou);
   let ch=false;
   catItems.forEach((x,i)=>{if(x&&x.ou===ou){if(x.url.startsWith('blob:'))URL.revokeObjectURL(x.url);catItems[i]=null;ch=true;if(selApi===i)selApi=-1;}});
   if(ch)catSaveAll();
@@ -588,8 +596,8 @@ function sharePic(file){
 // 完成画面の保存ボタン:作れたら押せる、作れなければ隠す
 const doneFiles={};
 function donePrep(item,sel){
-  const b=$(sel),tok={};doneFiles[sel]=tok;b.disabled=true;b.style.display='';
-  picFile(item).then(f=>{if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;if(f)b.disabled=false;else b.style.display='none';});
+  const b=$(sel),g=$(sel+'G'),tok={};doneFiles[sel]=tok;b.disabled=true;b.style.display='';g.style.display='';
+  picFile(item).then(f=>{if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;if(f)b.disabled=false;else{b.style.display='none';g.style.display='none';}});
 }
 $('#doneSave').onclick=()=>{ensureAudio();const f=doneFiles['#doneSave'];if(f instanceof File)sharePic(f);};
 $('#sdSave').onclick=()=>{ensureAudio();const f=doneFiles['#sdSave'];if(f instanceof File)sharePic(f);};

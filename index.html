@@ -39,6 +39,9 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 /* 長押しで「写真に追加」できるように */
 #zoomImg,#sdCat{-webkit-touch-callout:default;pointer-events:auto}
 .bb.sv{margin-top:18px;min-height:64px;font-size:22px;min-width:300px}
+.dlg p.sguide{font-size:18px;margin:8px 0 0;color:var(--sub)}
+.kana .dlg p.sguide{word-break:keep-all;overflow-wrap:anywhere}
+@media (max-height:860px){#sdDoneOv p.sguide{font-size:16px;margin-top:6px}}
 .bb:disabled{opacity:.45}
 @media (max-height:860px){#sdDoneOv .bb.sv{margin-top:12px;min-height:58px}}
 #sdBoard{position:relative}
@@ -457,6 +460,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb p" id="againBtn" data-t="again">もう一度</button>
   </div>
   <button class="bb s sv" id="doneSave" data-t="savePicDone">📥 この絵をiPadに保存</button>
+  <p class="sguide" id="doneSaveG" data-t="saveGuide">押したあとの画面で「画像を保存」を選ぶと、写真アプリに入ります</p>
 </div></div>
 
 <div class="ov" id="sdDoneOv"><div class="dlg">
@@ -473,6 +477,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb p" id="sdAgainBtn" data-t="sdAgain">もう一問</button>
   </div>
   <button class="bb s sv" id="sdSave" data-t="savePicDone">📥 この絵をiPadに保存</button>
+  <p class="sguide" id="sdSaveG" data-t="saveGuide">押したあとの画面で「画像を保存」を選ぶと、写真アプリに入ります</p>
 </div></div>
 
 <!-- 管理用の設定(メニューの版番号を3秒長押しで開く。ご家族は使わない) -->
@@ -494,6 +499,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="ver"></div>
 </div></div>
 
-<script src="app.js?v=20261115155017"></script>
+<script src="app.js?v=20261115161640"></script>
 </body>
 </html>
