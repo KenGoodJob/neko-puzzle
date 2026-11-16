@@ -151,6 +151,19 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .dlg.apv p{font-size:17px;margin:4px 0 8px;color:var(--sub)}
 .dlg.apv p.apvSum{font-size:18px;font-weight:bold;margin:14px 0 6px;color:var(--ink)}
 .dlg.apv p.apvSum.ng{color:#C0301A}
+#apvZOv{z-index:10001;padding:10px}
+.apvZ{background:#fff;border-radius:20px;padding:12px 12px 14px;width:min(640px,100%);max-height:100%;overflow:auto;text-align:center}
+.apvZH{font-size:20px;font-weight:bold;margin:0 0 8px}
+.apvZW{background:#2A211B;border-radius:12px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.apvZW img{display:block;max-width:100%;max-height:calc(100vh - 330px);max-height:calc(100dvh - 330px);object-fit:contain;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.apvZ p.apvZQ{font-size:17px;font-weight:bold;margin:6px 0 0}
+.apvZS{font-size:19px;margin:4px 0 10px;color:var(--sub)}
+.apvZS.on{color:var(--pri-d);font-weight:bold}
+.apvZ .bb{min-width:0;width:100%;min-height:62px;font-size:22px;margin:0 0 10px}
+.apvZ .bb.del{background:#F6D9D2;color:#9A2A18}
+.apvZ .row{gap:8px;flex-wrap:nowrap}
+.apvZ .row .bb{flex:1;width:auto;font-size:19px;padding:0 8px;margin:0}
+.apvZ .bb:disabled{opacity:.4}
 @media (max-width:560px){.dlg.adm{padding:20px 16px}.dlg.adm h3{font-size:30px}.adm .admLim{flex-wrap:wrap;gap:10px}.adm .admLim>span{flex:1 1 100%;text-align:center}.adm .bb{min-width:0;width:100%}.adm .row{flex-direction:column;gap:10px}}
 #apvOut{width:100%;height:120px;font-size:12px;font-family:ui-monospace,Menlo,monospace;margin-top:6px;-webkit-user-select:text;user-select:text}
 .credit{width:100%;max-width:980px;font-size:16px;color:var(--sub);text-align:right;margin:8px 0 0}
@@ -595,9 +608,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 <div class="ov" id="apvOv"><div class="dlg apv">
   <h3 data-t="apvH">許可リストの管理</h3>
   <p class="src" id="apvSt"></p>
-  <h4 data-t="apvCurH">公開中の写真(タップで「外す」)</h4>
+  <h4 data-t="apvCurH">公開中の写真(タップで大きく見て「外す」)</h4>
   <div class="apvGrid" id="apvCur"></div>
-  <h4 data-t="apvCandH">候補(タップで「許可」)</h4>
+  <h4 data-t="apvCandH">候補(タップで大きく見て「許可」)</h4>
   <button class="bb s" id="apvFind" data-t="apvFind">🔍 候補を探す</button>
   <p class="src" id="apvFindMsg"></p>
   <div class="apvGrid" id="apvCand"></div>
@@ -608,6 +621,16 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvDraftDel" data-t="apvDraftDel">下書きを消す</button><button class="bb s" id="apvClose" data-t="close">閉じる</button></div>
 </div></div>
 
-<script src="app.js?v=20261116022303"></script>
+<!-- 許可リストの管理:写真の拡大表示 -->
+<div class="ov zoom" id="apvZOv"><div class="apvZ">
+  <p class="apvZH" id="apvZH"></p>
+  <div class="apvZW" id="apvZW"><img id="apvZImg" alt=""></div>
+  <p class="qt apvZQ" id="apvZQ"></p>
+  <p class="apvZS" id="apvZS"></p>
+  <button class="bb p" id="apvZTg"></button>
+  <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
+</div></div>
+
+<script src="app.js?v=20261117020500"></script>
 </body>
 </html>

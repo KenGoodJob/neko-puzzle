@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261116022303';
+const APP_VERSION='20261117020500';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -110,8 +110,8 @@ const T={
   admReset:['0に戻す','0に もどす'],
   admTest:['テスト用のボタン','テストようの ボタン'],
   apvH:['許可リストの管理','きょか リストの かんり'],
-  apvCurH:['公開中の写真(タップで「外す」)','こうかいちゅうの しゃしん(タップで「はずす」)'],
-  apvCandH:['候補(タップで「許可」)','こうほ(タップで「きょか」)'],
+  apvCurH:['公開中の写真(タップで大きく見て「外す」)','こうかいちゅうの しゃしん(タップで おおきく みて「はずす」)'],
+  apvCandH:['候補(タップで大きく見て「許可」)','こうほ(タップで おおきく みて「きょか」)'],
   apvFind:['🔍 候補を探す','🔍 こうほを さがす'],
   apvFinding:['探しています…','さがしています…'],
   apvCopy:['📋 一覧をコピー','📋 いちらんを コピー'],
@@ -119,6 +119,12 @@ const T={
   apvCopyNg:['コピーできませんでした。下の欄を長押しして全部を選び、コピーしてください','コピー できませんでした。したの らんを ながおしして ぜんぶを えらび、コピー してください'],
   apvDraftDel:['下書きを消す','したがきを けす'],
   apvRm:['外す','はずす'],apvOk:['許可','きょか'],
+  apvZCur:['番(公開中)','ばん(こうかいちゅう)'],apvZCand:['候補','こうほ'],
+  apvZRmOn:['外す予定です','はずす よてい です'],apvZRmOff:['公開中のままです','こうかいちゅうの まま です'],
+  apvZOkOn:['許可する予定です','きょかする よてい です'],apvZOkOff:['まだ許可していません','まだ きょか していません'],
+  apvZRm:['外す','はずす'],apvZRmNo:['外すのをやめる','はずすのを やめる'],
+  apvZOk:['✓ 許可する','✓ きょかする'],apvZOkNo:['許可をやめる','きょかを やめる'],
+  apvZPrev:['◀ 前','◀ まえ'],apvZNext:['次 ▶','つぎ ▶'],
   qH:['画質','がしつ'],q0:['よい','よい'],q1:['ふつう','ふつう'],q2:['あらめ','あらめ'],
   apvNoChange:['変更はありません','へんこうは ありません'],
   testFill:['🛠 答えを埋める(テスト用)','🛠 こたえを うめる(テストよう)'],
@@ -2059,21 +2065,23 @@ function apvTile(src,label,on,badge,onTap){
   if(on)b.appendChild(mk('span','apvB',badge));
   b.onclick=onTap;return b;
 }
+// 拡大表示で見る写真の並び(公開中 → 候補。画面の並びと同じ)
+let apvZ=[],apvZi=-1;
 function apvRender(){
   const d=admDraftClean(),cur=$('#apvCur'),cand=$('#apvCand');cur.replaceChildren();cand.replaceChildren();
+  const zk=apvZi>=0&&apvZ[apvZi]?apvZ[apvZi].kind+'|'+apvZ[apvZi].u:'';apvZ=[];
+  const add=z=>{const i=apvZ.length;apvZ.push(z);return ()=>apvZOpen(i);};
   const k=kana?'まい':'枚';
   $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')':(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
   if(apvAdmList)apvAdmList.list.slice().sort((a,b)=>b.no-a.no).forEach(e=>{
     const on=d.rm.includes(e.no);
-    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),()=>{const x=admDraft();x.rm=on?x.rm.filter(n=>n!==e.no):x.rm.concat(e.no);admDraftSave(x);apvRender();}));
+    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,on})));
   });
-  // 許可した候補(下書き)+今回見つけた候補
-  const shown=new Set();
-  d.add.forEach(e=>{shown.add(e.u);const c=apvCands.find(x=>x.u===e.u);
-    cand.appendChild(apvTile(c?c.url:e.u,'',true,t('apvOk'),()=>{const x=admDraft();x.add=x.add.filter(y=>y.u!==e.u);admDraftSave(x);apvRender();}));});
-  apvCands.filter(c=>!shown.has(c.u)).forEach(c=>{
-    cand.appendChild(apvTile(c.url,'',false,'',()=>{const x=admDraft();if(!x.add.some(y=>y.u===c.u))x.add.push({u:c.u,h:c.h});apvAutoRm(x);admDraftSave(x);apvRender();}));
-  });
+  // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
+  const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
+  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,on:true}))));
+  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,on})));});
+  if(apvZi>=0){const i=apvZ.findIndex(z=>z.kind+'|'+z.u===zk);if(i>=0){apvZi=i;apvZPaint();}else apvZClose();}
   const tot=apvTotal(d),over=tot-APV_ADM_MAX;
   $('#apvSum').textContent=(kana?'いま ':'今 ')+(apvAdmList?apvAdmList.list.length:0)+k+' − '+t('apvRm')+' '+d.rm.length+k+' + '+t('apvOk')+' '+d.add.length+k+' = '+tot+k+(kana?'(じょうげん ':'(上限 ')+APV_ADM_MAX+k+')'
     +(over>0?(kana?' あと '+over+'まい はずしてください':' あと'+over+'枚外してください'):'');
@@ -2082,6 +2090,38 @@ function apvRender(){
   $('#apvFind').disabled=apvFinding;
   $('#apvFind').textContent=apvFinding?t('apvFinding'):t('apvFind');
 }
+// 拡大表示:写真全体(切り取らない)を大きく出し、中で「許可する/外す」を決める。◀▶・左右スワイプで前後の写真へ
+function apvZOpen(i){apvZi=i;apvZPaint();$('#apvZOv').classList.add('on');}
+function apvZClose(){apvZi=-1;$('#apvZOv').classList.remove('on');$('#apvZImg').removeAttribute('src');}
+function apvZPaint(){
+  const z=apvZ[apvZi];if(!z){apvZClose();return;}
+  const im=$('#apvZImg'),u=safeImgUrl(z.src);if(im.getAttribute('src')!==u)im.src=u;
+  qBind(im,$('#apvZQ'),true,true,false);
+  const cur=z.kind==='cur',nc=apvZ.filter(x=>x.kind===z.kind),pos=nc.indexOf(z)+1;
+  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length;
+  const s=$('#apvZS');s.textContent=t(cur?(z.on?'apvZRmOn':'apvZRmOff'):(z.on?'apvZOkOn':'apvZOkOff'));s.classList.toggle('on',z.on);
+  const b=$('#apvZTg');b.textContent=t(cur?(z.on?'apvZRmNo':'apvZRm'):(z.on?'apvZOkNo':'apvZOk'));
+  b.className='bb '+(!cur&&!z.on?'p':'s')+(cur&&!z.on?' del':'');
+  $('#apvZPrev').disabled=apvZi<=0;$('#apvZNext').disabled=apvZi>=apvZ.length-1;
+}
+function apvZToggle(){
+  const z=apvZ[apvZi];if(!z)return;const x=admDraft();
+  if(z.kind==='cur')x.rm=x.rm.includes(z.no)?x.rm.filter(n=>n!==z.no):x.rm.concat(z.no);
+  else if(x.add.some(y=>y.u===z.u))x.add=x.add.filter(y=>y.u!==z.u);
+  else{x.add.push({u:z.u,h:z.h});apvAutoRm(x);}
+  admDraftSave(x);apvRender();
+}
+function apvZGo(d){const i=apvZi+d;if(i>=0&&i<apvZ.length){apvZi=i;apvZPaint();}}
+$('#apvZTg').onclick=apvZToggle;
+$('#apvZPrev').onclick=()=>apvZGo(-1);
+$('#apvZNext').onclick=()=>apvZGo(1);
+$('#apvZClose').onclick=apvZClose;
+$('#apvZOv').onclick=e=>{if(e.target.id==='apvZOv')apvZClose();};
+{let sw=null;const w=$('#apvZW');
+  $('#apvZImg').draggable=false;w.addEventListener('dragstart',e=>e.preventDefault());
+  w.addEventListener('pointerdown',e=>{sw={x:e.clientX,y:e.clientY};});
+  w.addEventListener('pointerup',e=>{if(!sw)return;const dx=e.clientX-sw.x,dy=e.clientY-sw.y;sw=null;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)apvZGo(dx<0?1:-1);});
+  w.addEventListener('pointercancel',()=>{sw=null;});}
 async function apvAdmOpen(){
   $('#admOv').classList.remove('on');$('#apvOv').classList.add('on');
   $('#apvOut').value='';$('#apvOut').style.display='none';$('#apvCopyMsg').textContent='';
@@ -2139,7 +2179,7 @@ $('#apvCopy').onclick=()=>{
   try{navigator.clipboard.writeText(s).then(()=>done(true),()=>done(false));}catch(e){done(false);}
 };
 $('#apvDraftDel').onclick=()=>{try{localStorage.removeItem(ADM_DRAFT_KEY);}catch(e){}$('#apvOut').style.display='none';apvRender();};
-$('#apvClose').onclick=()=>{$('#apvOv').classList.remove('on');};
+$('#apvClose').onclick=()=>{apvZClose();$('#apvOv').classList.remove('on');};
 
 /* ====== 新しい版のお知らせ ====== */
 // 同じ場所の version.json を読み、今より新しい版があればメニューの上部に帯を出す。失敗しても何もしない
