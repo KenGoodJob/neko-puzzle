@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117021230';
+const APP_VERSION='20261117025417';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -114,6 +114,10 @@ const T={
   apvCandH:['候補(タップで大きく見て「許可」)','こうほ(タップで おおきく みて「きょか」)'],
   apvFind:['🔍 候補を探す','🔍 こうほを さがす'],
   apvFinding:['探しています…','さがしています…'],
+  apvP1:['① 候補を集めています','① こうほを あつめています'],
+  apvP2:['② 写真を確かめています','② しゃしんを たしかめています'],
+  apvPFound:['見つかった写真','みつかった しゃしん'],
+  apvPWait:['数分かかります。この画面のままお待ちください','すうふん かかります。この がめんの まま おまちください'],
   apvCopy:['📋 一覧をコピー','📋 いちらんを コピー'],
   apvCopied:['コピーしました。Claudeのチャットに貼り付けてください','コピー しました。Claudeの チャットに はりつけてください'],
   apvCopyNg:['コピーできませんでした。下の欄を長押しして全部を選び、コピーしてください','コピー できませんでした。したの らんを ながおしして ぜんぶを えらび、コピー してください'],
@@ -2153,21 +2157,38 @@ async function apvAdmOpen(){
   apvRender();
 }
 // 候補を探す:取得元からアドレスをもらい、持ち出し許可つきで2回読んで中身が同じ写真だけを候補にする
+// 候補探しの途中経過(段階・件数・経過時間・棒)
+let apvFP=null,apvFTm=0;
+function apvFTime(sec){const m=Math.floor(sec/60),s=sec%60;return kana?(m?m+'ふん ':'')+s+'びょう':(m?m+'分'+String(s).padStart(2,'0')+'秒':s+'秒');}
+function apvFPaint(){
+  const P=apvFP,msg=$('#apvFindMsg'),bar=$('#apvBar');if(!P)return;
+  const sec=Math.floor((Date.now()-P.t0)/1000),un=kana?'まい':'枚';
+  let s,r;
+  if(P.ph===1){s=t('apvP1')+' '+P.done+' / '+P.total;r=P.total?0.15*P.done/P.total:0;}
+  else{s=t('apvP2')+' '+P.done+' / '+P.total+un+'('+t('apvPFound')+' '+P.ok+un+')';r=0.15+0.85*(P.total?P.done/P.total:1);}
+  msg.textContent=s+' ・ ⏱ '+apvFTime(sec)+'\n'+t('apvPWait');
+  msg.classList.add('apvFindOn');msg.style.whiteSpace='pre-line';
+  bar.hidden=false;$('#apvBarIn').style.width=Math.round(Math.min(1,r)*100)+'%';
+}
 async function apvFind(){
   if(apvFinding)return;
-  apvFinding=true;$('#apvFindMsg').textContent='';apvRender();
+  apvFinding=true;apvRender();
   const d=admDraft(),skip=new Set(catNg());
   if(apvAdmList)apvAdmList.list.forEach(e=>skip.add(e.u));
   d.add.forEach(e=>skip.add(e.u));apvCands.forEach(c=>skip.add(c.u));
   let urls=[];
-  const k=catKey();
-  if(k){try{const a=await fetchJson('https://api.thecatapi.com/v1/images/search?limit=10&mime_types=jpg,png',{headers:{'x-api-key':k}},10000);
-    if(Array.isArray(a))urls=urls.concat(a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean));}catch(e){}}
-  const nc=k?6:12;
-  const rs=await Promise.allSettled(Array.from({length:nc},(_,i)=>fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000)));
+  const k=catKey(),nc=k?6:12;
+  const P=apvFP={ph:1,done:0,total:nc+(k?1:0),ok:0,t0:Date.now()};
+  const tick=pr=>pr.finally(()=>{P.done++;apvFPaint();});
+  apvFPaint();clearInterval(apvFTm);apvFTm=setInterval(apvFPaint,1000);
+  const tca=k?tick(fetchJson('https://api.thecatapi.com/v1/images/search?limit=10&mime_types=jpg,png',{headers:{'x-api-key':k}},10000)).then(a=>{
+    if(Array.isArray(a))urls=urls.concat(a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean));}).catch(()=>{}):Promise.resolve();
+  const rs=await Promise.allSettled(Array.from({length:nc},(_,i)=>tick(fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000))));
+  await tca;
   rs.forEach(r=>{if(r.status!=='fulfilled'||!r.value||typeof r.value!=='object')return;const o=r.value,id=typeof o.id==='string'?o.id:(typeof o._id==='string'?o._id:'');if(CATAAS_ID_RE.test(id))urls.push('https://cataas.com/cat/'+id);});
   urls=[...new Set(urls)].filter(u=>!skip.has(u));
   let ok=0,ng=0,i=0;
+  P.ph=2;P.done=0;P.total=urls.length;apvFPaint();
   const work=async()=>{
     while(i<urls.length){
       const u=urls[i++];
@@ -2177,13 +2198,17 @@ async function apvFind(){
         if(h!==await sha256(b.buf))throw new Error('changed');
         const url=URL.createObjectURL(new Blob([a.buf],{type:a.type}));
         try{await loadCatImg(url);}catch(e){URL.revokeObjectURL(url);throw e;}
-        apvCands.push({u,h,url});ok++;apvRender();
+        apvCands.push({u,h,url});ok++;P.ok=ok;apvRender();
       }catch(e){ng++;}
+      P.done++;apvFPaint();
     }
   };
   await Promise.all([work(),work(),work()]);
+  clearInterval(apvFTm);apvFP=null;
+  const sec=Math.floor((Date.now()-P.t0)/1000);
   apvFinding=false;
-  $('#apvFindMsg').textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+(ng?(kana?'(もちだせない・なかみが かわる しゃしん '+ng+'まいは のぞきました)':'(持ち出せない・中身が変わる写真'+ng+'枚は除きました)'):'');
+  const msg=$('#apvFindMsg');msg.classList.remove('apvFindOn');msg.style.whiteSpace='';$('#apvBar').hidden=true;
+  msg.textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+'(⏱ '+apvFTime(sec)+')'+(ng?(kana?'(もちだせない・なかみが かわる しゃしん '+ng+'まいは のぞきました)':'(持ち出せない・中身が変わる写真'+ng+'枚は除きました)'):'');
   apvRender();
 }
 // approved.json の中身を作る(1行1枚)

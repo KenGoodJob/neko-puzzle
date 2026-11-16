@@ -152,6 +152,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .dlg.apv p.apvSum{font-size:18px;font-weight:bold;margin:14px 0 6px;color:var(--ink)}
 .dlg.apv p.apvSum.ng{color:#C0301A}
 #apvZOv{z-index:10001;padding:10px}
+.apvBar{height:16px;border-radius:8px;background:var(--line);overflow:hidden;margin:2px 0 12px}
+.apvBar[hidden]{display:none}
+#apvBarIn{height:100%;width:0;background:var(--pri);border-radius:8px;transition:width .3s}
+.dlg.apv p.apvFindOn{color:var(--ink);font-weight:bold}
 .apvOrd{display:flex;flex-direction:column;gap:8px}
 .apvO{display:flex;align-items:center;gap:10px;background:#FFF6EC;border:2px solid var(--line);border-radius:14px;padding:6px 8px}
 .apvOT{flex:0 0 auto;width:72px;height:72px;padding:0;border:none;border-radius:10px;overflow:hidden;background:#eee}
@@ -620,6 +624,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <h4 data-t="apvCandH">候補(タップで大きく見て「許可」)</h4>
   <button class="bb s" id="apvFind" data-t="apvFind">🔍 候補を探す</button>
   <p class="src" id="apvFindMsg"></p>
+  <div class="apvBar" id="apvBar" hidden><div id="apvBarIn"></div></div>
   <div class="apvGrid" id="apvCand"></div>
   <h4 id="apvOrdH" data-t="apvOrdH" style="display:none">許可する写真の順番(上から先に出ます)</h4>
   <div class="apvOrd" id="apvOrd"></div>
@@ -640,6 +645,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117021230"></script>
+<script src="app.js?v=20261117025417"></script>
 </body>
 </html>
