@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117222225';
+const APP_VERSION='20261117223503';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -99,6 +99,7 @@ const T={
   picWait:['写真を読み込んでいます','しゃしんを よみこんでいます'],
   picNg:['写真を読み込めませんでした。通信を確かめて、もう一度お試しください','しゃしんを よみこめませんでした。つうしんを たしかめて、もう いちど おためしください'],
   apvRsSz:['大きさが違う','おおきさが ちがう'],
+  noSaveS:['保存できない','ほぞん できない'],noSaveL:['iPadに保存できない','iPadに ほぞん できない'],canSaveL:['iPadに保存できる','iPadに ほぞん できる'],
   admAskQ:['管理用の設定を開きますか?','かんりようの せっていを ひらきますか?'],
   admAskP:['ふだんは使いません。「開かない」を押してください','ふだんは つかいません。「ひらかない」を おしてください'],
   admAskNo:['開かない','ひらかない'],admAskYes:['開く','ひらく'],
@@ -495,10 +496,11 @@ function apvParse(o){
   const nos=new Set(),us=new Set(),list=[];
   for(const e of o.list.slice(0,APV_MAX)){
     if(!e||typeof e!=='object'||!Number.isInteger(e.no)||e.no<1||e.no>99999||!catOkUrl(e.u))continue;
-    const tca=TCA_IMG_RE.test(e.u);
-    if(tca?!szOk(e.sz):(typeof e.h!=='string'||!HASH_RE.test(e.h)))continue;
+    // 指紋 h がある写真は iPad 内に保存して使う。大きさ sz だけの写真(The Cat API は必ず、cataas は持ち出せない写真)は毎回読む
+    const hok=!TCA_IMG_RE.test(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h);
+    if(!hok&&!szOk(e.sz))continue;
     if(nos.has(e.no)||us.has(e.u))continue;
-    nos.add(e.no);us.add(e.u);list.push(tca?{no:e.no,u:e.u,h:'',sz:[e.sz[0],e.sz[1]]}:{no:e.no,u:e.u,h:e.h});
+    nos.add(e.no);us.add(e.u);list.push(hok?{no:e.no,u:e.u,h:e.h}:{no:e.no,u:e.u,h:'',sz:[e.sz[0],e.sz[1]]});
   }
   const next=Number.isInteger(o.next)&&o.next>=1&&o.next<=100000?o.next:1;
   return {next:Math.max(next,...list.map(e=>e.no+1),1),list};
@@ -529,7 +531,7 @@ async function apvLoadDb(){
   return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,APV_MAX);
 }
 const apvBadKey=e=>e.no+':'+(e.sz?e.sz[0]+'x'+e.sz[1]:e.h);
-function apvMakeRemote(e,img,ready){return {api:true,remote:true,src:'thecatapi',ou:e.u,blob:null,url:e.u,img,ready,no:e.no,h:'',sz:e.sz};}
+function apvMakeRemote(e,img,ready){return {api:true,remote:true,src:catSrcOf(e.u),ou:e.u,blob:null,url:e.u,img,ready,no:e.no,h:'',sz:e.sz};}
 function apvMakeItem(e){
   const url=URL.createObjectURL(e.blob),{img,ready}=loadImg(url);
   return {api:true,src:catSrcOf(e.u),ou:e.u,blob:e.blob,url,img,ready,no:e.no,h:e.h};
@@ -724,7 +726,7 @@ function renderCatPics(){
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',String(o.no)));
     if(nw.has(o.no))pw.appendChild(mk('span','pnew','NEW'));
-    d.append(pw,q);qBind(im,q,true);
+    d.append(pw,q);if(o.remote)d.appendChild(mk('div','psvL',t('noSaveS')));qBind(im,q,true);
     d.onclick=()=>{selApi=k;selAlb=-1;const s=apvNew();if(s.delete(o.no))apvNewSave(s);renderAllPics();};
     box.appendChild(d);
   });
@@ -1432,7 +1434,7 @@ function jgImgRec(item,img){
   if(item.nm&&idx>=0&&idx<SAMPLE_N)return Promise.resolve({kind:'sample',idx});
   const meta=catMetaOk(item)?{src:item.src,ou:item.ou}:null;
   // The Cat API の写真は、写真の代わりにアドレスと大きさを残し、続きから遊ぶときに読み直す
-  if(item.remote)return Promise.resolve(TCA_IMG_RE.test(item.ou)&&szOk(item.sz)?{kind:'url',u:item.ou,sz:item.sz.slice(),cat:meta||undefined}:null);
+  if(item.remote)return Promise.resolve(catOkUrl(item.ou)&&szOk(item.sz)?{kind:'url',u:item.ou,sz:item.sz.slice(),cat:meta||undefined}:null);
   return imgBlobRec(img).then(r=>{if(r&&meta)r.cat=meta;return r;});
 }
 function imgBlobRec(img){
@@ -1476,14 +1478,14 @@ function jgValid(s,im){
 function imRecOk(im){
   if(!im||typeof im!=='object')return false;
   if(im.kind==='sample')return Number.isInteger(im.idx)&&im.idx>=0&&im.idx<SAMPLE_N;
-  if(im.kind==='url')return TCA_IMG_RE.test(im.u)&&szOk(im.sz)&&(im.cat===undefined||catMetaOk(im.cat));
+  if(im.kind==='url')return catOkUrl(im.u)&&szOk(im.sz)&&(im.cat===undefined||catMetaOk(im.cat));
   if(im.kind==='blob')return im.blob instanceof Blob&&/^image\/(jpeg|png|webp)$/.test(im.blob.type)&&im.blob.size<20e6&&(im.cat===undefined||catMetaOk(im.cat));
   return false;
 }
 // 保存した絵の記録から、遊ぶ絵を作る
 function itemFromRec(im){
   if(im.kind==='sample')return images[im.idx];
-  if(im.kind==='url'){const r=loadRemote(im.u,im.sz);return {no:0,remote:true,src:'thecatapi',ou:im.u,blob:null,url:im.u,img:r.img,ready:r.ready,sz:im.sz};}
+  if(im.kind==='url'){const r=loadRemote(im.u,im.sz);return {no:0,remote:true,src:catSrcOf(im.u),ou:im.u,blob:null,url:im.u,img:r.img,ready:r.ready,sz:im.sz};}
   const url=URL.createObjectURL(im.blob),it=Object.assign({no:0,url,blob:im.blob},loadImg(url));
   if(im.cat){it.src=im.cat.src;it.ou=im.cat.ou;}
   return it;
@@ -2169,7 +2171,7 @@ let apvAdmList=null,apvCands=[],apvFinding=false;
 function admDraft(){
   try{const o=JSON.parse(localStorage.getItem(ADM_DRAFT_KEY)||'null');
     if(!o||o.v!==1)return {add:[],rm:[]};
-    const add=Array.isArray(o.add)?o.add.filter(e=>e&&catOkUrl(e.u)&&(TCA_IMG_RE.test(e.u)?szOk(e.sz):typeof e.h==='string'&&HASH_RE.test(e.h))).map(e=>TCA_IMG_RE.test(e.u)?{u:e.u,sz:e.sz}:{u:e.u,h:e.h}).slice(0,APV_ADM_MAX):[];
+    const add=Array.isArray(o.add)?o.add.filter(e=>e&&catOkUrl(e.u)&&(!TCA_IMG_RE.test(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)||szOk(e.sz))).map(e=>!TCA_IMG_RE.test(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)?{u:e.u,h:e.h}:{u:e.u,sz:e.sz}).slice(0,APV_ADM_MAX):[];
     const rm=Array.isArray(o.rm)?o.rm.filter(n=>Number.isInteger(n)&&n>0&&n<=99999):[];
     return {add,rm};
   }catch(e){return {add:[],rm:[]};}
@@ -2189,11 +2191,12 @@ function apvAutoRm(d){
   const sorted=apvAdmList.list.map(e=>e.no).sort((a,b)=>a-b);
   for(const n of sorted){if(apvTotal(d)<=APV_ADM_MAX)break;if(!d.rm.includes(n))d.rm.push(n);}
 }
-function apvTile(src,label,on,badge,onTap,srcU){
+function apvTile(src,label,on,badge,onTap,srcU,noSave){
   const b=document.createElement('button');b.className='pic apvT'+(on?' on':'');
   const im=mk('img');im.alt='';im.src=safeImgUrl(src);
   const q=mk('div','qt');b.append(im,q);qBind(im,q,true,true,true);
   if(label)b.appendChild(mk('span','pno',label));
+  if(noSave)b.appendChild(mk('span','psv',t('noSaveS')));
   if(typeof src==='string')b.appendChild(mk('span','psrc'+(catSrcOf(srcU)==='thecatapi'?' tca':''),catSrcShort(srcU)));
   if(on)b.appendChild(mk('span','apvB',badge));
   b.onclick=onTap;return b;
@@ -2208,12 +2211,12 @@ function apvRender(){
   $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')'+apvSrcCount(apvAdmList.list.map(e=>e.u)):(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
   if(apvAdmList)apvAdmList.list.slice().sort((a,b)=>b.no-a.no).forEach(e=>{
     const on=d.rm.includes(e.no);
-    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,on}),e.u));
+    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,sz:e.sz,on}),e.u,!!e.sz));
   });
   // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
   const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
-  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,sz:e.sz,on:true}),e.u)));
-  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,sz:c.sz,on}),c.u));});
+  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,sz:e.sz,on:true}),e.u,!!e.sz)));
+  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,sz:c.sz,on}),c.u,!!c.sz));});
   apvOrdRender(d);
   if(apvZi>=0){const i=apvZ.findIndex(z=>z.kind+'|'+z.u===zk);if(i>=0){apvZi=i;apvZPaint();}else apvZClose();}
   const tot=apvTotal(d),over=tot-APV_ADM_MAX;
@@ -2255,7 +2258,7 @@ function apvZPaint(){
   const im=$('#apvZImg'),u=safeImgUrl(z.src);if(im.getAttribute('src')!==u)im.src=u;
   qBind(im,$('#apvZQ'),true,true,false);
   const cur=z.kind==='cur',nc=apvZ.filter(x=>x.kind===z.kind),pos=nc.indexOf(z)+1;
-  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u);
+  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u)+' ・ '+t(z.sz?'noSaveL':'canSaveL');
   const s=$('#apvZS');s.textContent=t(cur?(z.on?'apvZRmOn':'apvZRmOff'):(z.on?'apvZOkOn':'apvZOkOff'));s.classList.toggle('on',z.on);
   const b=$('#apvZTg');b.textContent=t(cur?(z.on?'apvZRmNo':'apvZRm'):(z.on?'apvZOkNo':'apvZOk'));
   b.className='bb '+(!cur&&!z.on?'p':'s')+(cur&&!z.on?' del':'');
@@ -2339,7 +2342,17 @@ async function apvFind(){
           if(api&&(api[0]!==sz[0]||api[1]!==sz[1]))throw new Error('size');
           apvCands.push({u,h:'',sz,url:u});ok++;S.thecatapi.ok++;P.ok=ok;apvRender();P.done++;apvFPaint();continue;
         }
-        const a=await fetchBytes(u),b=await fetchBytes(u,20000,'reload');
+        let a;
+        try{a=await fetchBytes(u);}
+        catch(e0){
+          // 持ち出せない cataas の写真:表示して大きさを測る。中身が変わる写真を除くため、別のアドレス(?_=)でもう一度読み、大きさが同じものだけ
+          if(apvErrWhy(e0,false)!=='apvRsCors')throw e0;
+          const i1=await loadRemote(u,null,20000).ready,sz=[i1.naturalWidth,i1.naturalHeight];
+          if(!szOk(sz)||Math.min(sz[0],sz[1])<200)throw new Error('small');
+          await loadRemote(u+'?_='+Date.now().toString(36),sz,20000).ready.catch(e=>{throw new Error(e&&e.message==='size'?'changed':'load');});
+          apvCands.push({u,h:'',sz,url:u});ok++;S.cataas.ok++;P.ok=ok;apvRender();P.done++;apvFPaint();continue;
+        }
+        const b=await fetchBytes(u,20000,'reload');
         const h=await sha256(a.buf);
         if(h!==await sha256(b.buf))throw new Error('changed');
         const url=URL.createObjectURL(new Blob([a.buf],{type:a.type}));
