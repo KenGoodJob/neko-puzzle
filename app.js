@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118020108';
+const APP_VERSION='20261118020723';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -811,6 +811,12 @@ $('#catFav').onclick=()=>{
   if(r==='off')apvKeepPrune();
   renderAllPics();renderSel();
 };
+// 出た猫の一覧の1段の枚数(.pics は幅170px以上・間18px・最大980px)×2段
+let catShowLast=0;
+function catShowN(){
+  const w=$('#catPics').clientWidth||Math.min(980,document.documentElement.clientWidth-40);
+  return Math.max(2,Math.floor((w+18)/(170+18)))*2;
+}
 function renderCatPics(){
   const box=$('#catPics'),msg=$('#catMsg'),del=$('#catDel'),q=$('#catQuota'),fb=$('#catFold');box.replaceChildren();
   const show=catState==='ok';
@@ -827,8 +833,10 @@ function renderCatPics(){
     fb.style.display='none';return;
   }
   // 新しい順に6枚まで。それより前は「前の写真も見る」で開く(選んでいる写真は必ず見せる)
-  if(selApi>=APV_SHOW)apvFold=false;
-  const nw=apvNew(),gf=new Set(catGift()),fv=new Set(catFav()),lim=apvFold?APV_SHOW:catItems.length;
+  // 2段まで見せて、それより前は「前の写真も見る」で開く(段の枚数は画面の幅で変わる。iPad 横は5枚×2段)
+  const nShow=catShowN();catShowLast=nShow;
+  if(selApi>=nShow)apvFold=false;
+  const nw=apvNew(),gf=new Set(catGift()),fv=new Set(catFav()),lim=apvFold?nShow:catItems.length;
   catItems.slice(0,lim).forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
@@ -840,7 +848,7 @@ function renderCatPics(){
     d.onclick=()=>{selApi=k;selAlb=-1;const s=apvNew();if(s.delete(o.no))apvNewSave(s);renderAllPics();};
     box.appendChild(d);
   });
-  const more=catItems.length-APV_SHOW;
+  const more=catItems.length-nShow;
   fb.style.display=more>0?'':'none';
   fb.textContent=apvFold?t('apvOpen1')+(kana?' ('+more+'まい)':'('+more+'枚)'):t('apvClose');
   if(!show)return;
@@ -1311,6 +1319,7 @@ let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
   if($('#play').classList.contains('on')&&!drag)relayout();
   if($('#sdPlay').classList.contains('on')){qpClose();sdLayout();}
+  if(catShowLast&&catShowN()!==catShowLast)renderCatPics(); // 向きを変えたら、2段に合わせて見せる枚数を直す
 },150);});
 
 /* ====== 指での操作 ====== */
