@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117231339';
+const APP_VERSION='20261117232011';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -2124,8 +2124,8 @@ function admRender(msgKey){
   setTg($('#admTest'),testOn());
   // キーがあるときは入力欄と「保存する」を隠し、「キーを消す」だけにする
   const hk=!!catKey();$('#admKey').style.display=hk?'none':'';$('#admSave').style.display=hk?'none':'';$('#admDel').style.display=hk?'':'none';
-  $('#admAll').textContent=t(catShowAll?'admAllOff':'admAllOn');
-  $('#admBadClr').style.display=apvStat.bad?'':'none';
+  {const b=$('#admAll');if(b)b.textContent=t(catShowAll?'admAllOff':'admAllOn');}
+  {const b=$('#admBadClr');if(b)b.style.display=apvStat.bad?'':'none';}
   if(Date.now()-admInitAt>4000)$('#admInit').textContent=t('admInit');
 }
 // 長押しのあと、確認してから開く(「開かない」を大きく、「開く」は下に離して小さく。外側タップは閉じる)
@@ -2133,7 +2133,13 @@ function admAsk(){ensureAudio();tone(660,0,.15,.08);$('#admAskOv').classList.add
 $('#admAskOv').onclick=e=>{if(e.target.id==='admAskOv')$('#admAskOv').classList.remove('on');};
 $('#admAskNo').onclick=()=>$('#admAskOv').classList.remove('on');
 $('#admAskYes').onclick=()=>{$('#admAskOv').classList.remove('on');admOpen();};
-function admOpen(){admInitAt=0;$('#admKey').value='';if(!admConnBusy)$('#admConn').textContent='';admRender('');$('#admOv').classList.add('on');}
+function admOpen(){
+  admInitAt=0;
+  // 表示の途中で問題があっても管理用の設定は開き、問題の内容を出す(原因を調べるため)
+  try{$('#admKey').value='';if(!admConnBusy)$('#admConn').textContent='';admRender('');}
+  catch(e){const m=$('#admMsg');if(m)m.textContent=(kana?'ひょうじの もんだい:':'表示の問題:')+String(e&&e.message||e).slice(0,120);}
+  $('#admOv').classList.add('on');
+}
 function admAfterChange(){renderCatPics();}
 function admSetLimit(d){
   const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
@@ -2185,8 +2191,8 @@ async function admConn(){
   out.textContent=L.join('\n');b.disabled=false;admConnBusy=false;
 }
 $('#admConnBtn').onclick=admConn;
-$('#admBadClr').onclick=async()=>{const b=$('#admBadClr');b.disabled=true;apvBadClear();apvStat.bad=0;admRender('admBadRe');try{await initCats();}finally{b.disabled=false;admRender('admBadReDone');}};
-$('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRebuild();renderAllPics();renderSel();admRender('');};
+if($('#admBadClr'))$('#admBadClr').onclick=async()=>{const b=$('#admBadClr');b.disabled=true;apvBadClear();apvStat.bad=0;admRender('admBadRe');try{await initCats();}finally{b.disabled=false;admRender('admBadReDone');}};
+if($('#admAll'))$('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRebuild();renderAllPics();renderSel();admRender('');};
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
 // テスト用のボタン(数独の「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
