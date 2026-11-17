@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117232011';
+const APP_VERSION='20261117235232';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -214,6 +214,16 @@ const T={
   admBadRe:['確かめ直しています…','たしかめ なおして います…'],admBadReDone:['確かめ直しました','たしかめ なおしました'],
   admAllOn:['全部の猫を「出た猫」に出す(テスト用・アプリを閉じると戻ります)','ぜんぶの ねこを「でた ねこ」に だす(テストよう・アプリを とじると もどります)'],
   admAllOff:['全部の猫を出すのをやめる(テスト中)','ぜんぶの ねこを だすのを やめる(テストちゅう)'],
+  favOn:['★ お気に入りにする','★ おきにいりに する'],
+  favOff:['★ お気に入りをやめる','★ おきにいりを やめる'],
+  favCnt:['お気に入り','おきにいり'],
+  favFull:['お気に入りは10枚までです。ほかの猫の★をやめてから付けてください','おきにいりは 10まい までです。ほかの ねこの ★を やめてから つけてください'],
+  giftNew:['🎁 この猫を、iPadに保存できるようになりました','🎁 この ねこを、iPadに ほぞん できるように なりました'],
+  giftMark:['🎁 クリアした猫の印が付きました','🎁 クリアした ねこの しるしが つきました'],
+  giftNeed:['ジグソーパズルでこの猫をクリアすると、iPadに保存できます','ジグソーパズルで この ねこを クリアすると、iPadに ほぞん できます'],
+  giftJg:['クリアすると🎁が付き、この猫をiPadに保存できるようになります','クリアすると 🎁が つき、この ねこを iPadに ほぞん できるように なります'],
+  giftJgR:['クリアすると🎁が付きます','クリアすると 🎁が つきます'],
+  giftZoomR:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
   admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
@@ -498,6 +508,24 @@ function qBind(img,el,on,raw,short){
 function qRefresh(){document.querySelectorAll('[data-px]').forEach(qPaint);}
 // 消した写真(不適切な画像など)のアドレス。二度と出さない
 const CAT_NG_KEY='neko-cat-ng',CAT_NG_MAX=300;
+// 段階2:🎁(ジグソーをクリアした猫)と★(お気に入り、10枚まで)。写真のアドレスで覚える
+const CAT_GIFT_KEY='neko-cat-gift',CAT_FAV_KEY='neko-cat-fav',CAT_FAV_MAX=10;
+function urlList(k,max){try{const a=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(a)?[...new Set(a.filter(catOkUrl))].slice(-max):[];}catch(e){return [];}}
+function urlListSave(k,a){try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
+const catGift=()=>urlList(CAT_GIFT_KEY,CAT_NG_MAX),catFav=()=>urlList(CAT_FAV_KEY,CAT_FAV_MAX);
+const isCat=it=>!!(it&&catOkUrl(it.ou));
+const hasGift=it=>isCat(it)&&catGift().includes(it.ou);
+// アプリからiPadに保存してよい絵(イラスト・iPadの写真はいつでも。猫の写真は🎁の猫だけ)
+const canSave=it=>!!it&&(!isCat(it)||hasGift(it));
+function catGiftAdd(u){if(!catOkUrl(u))return false;const a=catGift();if(a.includes(u))return false;a.push(u);urlListSave(CAT_GIFT_KEY,a.slice(-CAT_NG_MAX));return true;}
+// ★を付ける/やめる。'on'・'off'・'full'(10枚に達している)
+function catFavToggle(u){
+  if(!catOkUrl(u))return 'off';const a=catFav(),i=a.indexOf(u);
+  if(i>=0){a.splice(i,1);urlListSave(CAT_FAV_KEY,a);return 'off';}
+  if(a.length>=CAT_FAV_MAX)return 'full';
+  a.push(u);urlListSave(CAT_FAV_KEY,a);return 'on';
+}
+function catMarkDrop(u){urlListSave(CAT_GIFT_KEY,catGift().filter(x=>x!==u));urlListSave(CAT_FAV_KEY,catFav().filter(x=>x!==u));}
 function catNg(){try{const a=JSON.parse(localStorage.getItem(CAT_NG_KEY)||'[]');return Array.isArray(a)?a.filter(catOkUrl).slice(-CAT_NG_MAX):[];}catch(e){return [];}}
 function catNgAdd(u){if(!catOkUrl(u))return;const a=catNg().filter(x=>x!==u);a.push(u);try{localStorage.setItem(CAT_NG_KEY,JSON.stringify(a.slice(-CAT_NG_MAX)));}catch(e){}}
 // 許可リスト(approved.json)の形式を確かめる。合わない行は捨てる
@@ -723,7 +751,7 @@ function catDelDo(){
     toast('catDelDone',2000);renderAllPics();return;
   }
   // 猫の写真から消すのは不適切な画像のため:出さない一覧に入れ、ごほうびの絵からも消す
-  catNgAdd(ou);selApi=-1;apvRebuild();
+  catNgAdd(ou);catMarkDrop(ou);selApi=-1;apvRebuild();
   const before=albItems.length;
   albItems=albItems.filter(x=>{if(x.ou!==ou)return true;URL.revokeObjectURL(x.url);return false;});
   if(albItems.length!==before){selAlb=-1;albSave();}
@@ -736,6 +764,13 @@ $('#catDelYes').onclick=catDelDo;
 $('#catDel').onclick=()=>{ensureAudio();catDelAsk();};
 $('#albDel').onclick=()=>{ensureAudio();albDelAsk();};
 $('#catFold').onclick=()=>{apvFold=!apvFold;renderCatPics();};
+$('#catZoom').onclick=()=>{ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(o)zoomOpen(o);};
+$('#catFav').onclick=()=>{
+  ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(!o)return;
+  const r=catFavToggle(o.ou);if(r==='full'){toast('favFull',3200);return;}
+  if(r==='on')tone(1175,0,.18,.1);
+  renderCatPics();
+};
 function renderCatPics(){
   const box=$('#catPics'),msg=$('#catMsg'),del=$('#catDel'),q=$('#catQuota'),fb=$('#catFold');box.replaceChildren();
   const show=catState==='ok';
@@ -753,12 +788,14 @@ function renderCatPics(){
   }
   // 新しい順に6枚まで。それより前は「前の写真も見る」で開く(選んでいる写真は必ず見せる)
   if(selApi>=APV_SHOW)apvFold=false;
-  const nw=apvNew(),lim=apvFold?APV_SHOW:catItems.length;
+  const nw=apvNew(),gf=new Set(catGift()),fv=new Set(catFav()),lim=apvFold?APV_SHOW:catItems.length;
   catItems.slice(0,lim).forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
     const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',apvSeqLabel(o.no)));
     if(nw.has(o.no))pw.appendChild(mk('span','pnew','NEW'));
+    const mg=gf.has(o.ou),mf=fv.has(o.ou);
+    if(mg||mf){const m=mk('span','pmk');if(mg)m.appendChild(mk('span','pg','🎁'));if(mf)m.appendChild(mk('span','pf','★'));pw.appendChild(m);}
     d.append(pw,q);if(o.remote)d.appendChild(mk('div','psvL',t('noSaveS')));qBind(im,q,true);
     d.onclick=()=>{selApi=k;selAlb=-1;const s=apvNew();if(s.delete(o.no))apvNewSave(s);renderAllPics();};
     box.appendChild(d);
@@ -768,7 +805,10 @@ function renderCatPics(){
   fb.textContent=apvFold?t('apvOpen1')+(kana?' ('+more+'まい)':'('+more+'枚)'):t('apvClose');
   if(!show)return;
   del.textContent=t('catDel');
-  del.disabled=selApi<0||!catItems[selApi];
+  const so=selApi>=0?catItems[selApi]:null;
+  del.disabled=!so;$('#catZoom').disabled=!so;
+  const fb2=$('#catFav'),fon=!!so&&fv.has(so.ou);fb2.disabled=!so;fb2.classList.toggle('on',fon);
+  fb2.replaceChildren(document.createTextNode(t(fon?'favOff':'favOn')),mk('small',null,t('favCnt')+' '+fv.size+' / '+CAT_FAV_MAX));
   q.textContent=catShowAll?t('catAllNote'):t('apvClearHelp');
 }
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:selAlb>=0&&albItems[selAlb]?albItems[selAlb]:images[selPic];
@@ -781,9 +821,9 @@ function renderSel(){
   $('#jgSelImg').classList.toggle('flip',selFlip);
   $('#picZoom').disabled=selApi>=0||selAlb>=0;
   // 写真そのものを保存できなかった猫の写真は、ごほうびの絵に入らない(遊ぶ前に知らせる)
-  const ng=!!(it&&it.remote);
-  $('#jgNoGift').style.display=ng?'':'none';$('#sdNoGift').style.display='none';
-  $('#jgNoGift').textContent=t('remoteNote');
+  const ng=!!(it&&it.remote),gn=isCat(it)&&!hasGift(it);
+  $('#jgNoGift').style.display=ng||gn?'':'none';$('#sdNoGift').style.display='none';
+  $('#jgNoGift').textContent=(gn?t(ng?'giftJgR':'giftJg')+(kana?' ':''):'')+(ng?t('remoteNote'):'');
   $('#sdNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftSd');
 }
 /* ====== iPad本体(写真アプリ)への保存 ====== */
@@ -824,6 +864,7 @@ function donePrep(item,sel){
   qBind(im,$(DONE_PIC[sel][2]),!!item&&!item.nm);
   im.src=safeImgUrl(item?item.url:images[0].url);
   lp.className='lphint';lp.dataset.k='lpHint';lp.textContent=t('lpHint');
+  if(!canSave(item)){b.style.display='none';g.style.display='none';lp.dataset.k='giftNeed';lp.textContent=t('giftNeed');lp.classList.add('only');doneFiles[sel]=null;return;}
   picFile(item).then(f=>{
     if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;
     if(f){b.disabled=false;const u=URL.createObjectURL(f);doneUrls[sel]=u;im.src=u;}
@@ -844,6 +885,11 @@ function zoomOpen(item){
   const tok={};zoomTok=tok;zoomFile=null;
   qBind($('#zoomImg'),$('#zoomQ'),!item.nm);
   $('#zoomImg').src=safeImgUrl(item.url);$('#zoomSave').disabled=true;$('#zoomOv').classList.add('on');
+  // 🎁のない猫・アプリから保存できない写真は、保存ボタンを出さない
+  const zs=$('#zoomSave'),zh=$('#zoomHint'),ok=canSave(item);
+  zs.style.display=ok&&!item.remote?'':'none';zh.classList.toggle('only',!ok||!!item.remote);
+  zh.dataset.k=!ok?'giftNeed':item.remote?'giftZoomR':'saveHint';zh.textContent=t(zh.dataset.k);
+  if(!ok||item.remote)return;
   picFile(item).then(f=>{
     if(zoomTok!==tok)return;
     zoomFile=f;if(!f)return;
@@ -961,7 +1007,8 @@ function applyLang(){
   document.querySelectorAll('.lgb').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===kana));
   renderPics();renderCatPics();renderAlb();renderCounts();renderRots();renderFlips();
   if(lastSec!=null)$('#doneMsg').textContent=doneText(lastSec);
-  document.querySelectorAll('.lphint').forEach(e=>{if(e.dataset.k)e.textContent=t(e.dataset.k);});
+  document.querySelectorAll('.lphint,#zoomHint').forEach(e=>{if(e.dataset.k)e.textContent=t(e.dataset.k);});
+  renderSel();
   if(window.SD_READY)sdApplyLang();
   if(window.JG_READY)renderJgCont();
   if(window.UPD_READY)renderUpd();
@@ -1325,8 +1372,11 @@ function finish(){
   recordPlay('jigsaw');
   setTimeout(()=>{drawBoard();pieces.forEach(p=>p.el.style.opacity=0);sndDone();},350);
   lastSec=sec;$('#doneMsg').textContent=doneText(sec);
-  $('#doneGift').style.display='none';
-  albAddSafe(jgItem).then(g=>{$('#doneGift').style.display=g?'':'none';});
+  // 猫の写真なら🎁を付ける(どのピース数でも)
+  const gNew=isCat(jgItem)&&catGiftAdd(jgItem.ou),dg=$('#doneGift');
+  dg.dataset.t=jgItem&&jgItem.remote?'giftMark':'giftNew';dg.textContent=t(dg.dataset.t);dg.style.display=gNew?'':'none';
+  if(gNew)[784,988,1175].forEach((f,i)=>tone(f,1.9+i*.14,.35,.12));
+  renderCatPics();
   donePrep(jgItem,'#doneSave');
   setTimeout(()=>$('#doneOv').classList.add('on'),1700);
 }
@@ -2154,7 +2204,7 @@ let admInitAt=0;
 $('#admInit').onclick=()=>{
   if(Date.now()-admInitAt>4000){admInitAt=Date.now();$('#admInit').textContent=t('admInit2');return;}
   admInitAt=0;
-  try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,CAT_NG_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
+  try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,CAT_NG_KEY,CAT_GIFT_KEY,CAT_FAV_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
   selApi=-1;apvRebuild();apvTopUp();renderAllPics();renderSel();admRender('admInitDone');
 };
 $('#admSave').onclick=()=>{

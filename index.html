@@ -113,6 +113,15 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .catBtns{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;width:100%;max-width:980px}
 .catBtns .more{min-width:280px}
 .more.del{color:#9A3B22}
+#catBtns .brk{flex-basis:100%;height:0}
+#catBtns .del{margin-top:28px}
+.more.fav{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;color:#8A6200}
+.more.fav small{font-size:17px;color:var(--sub);font-weight:bold;margin-top:2px}
+.more.fav.on{background:#FFF1B8;border-color:#E0B000;box-shadow:0 4px 0 #E0B000}
+.pic .pmk{position:absolute;right:12px;top:12px;display:flex;gap:4px;pointer-events:none}
+.pic .pmk span{min-width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:rgba(255,255,255,.92);font-size:21px;line-height:1}
+.pic .pmk .pf{color:#E0A000;font-size:24px}
+.zhint.only{background:#FFF6D6;color:#7A4A00;border-radius:14px;padding:8px 14px;font-weight:bold;opacity:1;max-width:min(640px,90vw)}
 .pic.add{cursor:pointer;border-style:dashed}
 .pic.add .ph{aspect-ratio:1/1;border-radius:12px;background:#FBF3E8;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;color:var(--sub);gap:4px}
 .pic.add .ph b{font-size:52px;line-height:1}
@@ -416,6 +425,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="catBtns"><button class="more fold" id="catFold" style="display:none"></button></div>
   <p class="credit" id="catCredit" data-t="catCredit" style="display:none">写真:The Cat API / cataas</p>
   <div class="catBtns" id="catBtns" style="display:none">
+    <button class="more" id="catZoom" data-t="zoom">🔍 大きく見る</button>
+    <button class="more fav" id="catFav"></button>
+    <span class="brk"></span>
     <button class="more del" id="catDel"></button>
   </div>
   <p class="catQuota" id="catQuota" style="display:none"></p>
@@ -518,7 +530,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb s" id="zoomSave" data-t="savePic">📥 iPadに保存</button>
     <button class="bb p" id="zoomClose" data-t="close">閉じる</button>
   </div>
-  <p class="zhint" data-t="saveHint">絵を長押しして「写真に追加」でも保存できます</p>
+  <p class="zhint" id="zoomHint">絵を長押しして「写真に追加」でも保存できます</p>
 </div></div>
 
 <div class="ov" id="mihonOv"><div class="dlg">
@@ -689,6 +701,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117232011"></script>
+<script src="app.js?v=20261117235232"></script>
 </body>
 </html>
