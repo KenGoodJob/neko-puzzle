@@ -163,6 +163,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .psv{position:absolute;right:8px;bottom:8px;padding:2px 8px;border-radius:10px;background:rgba(90,90,90,.85);color:#fff;font-size:14px;font-weight:bold;pointer-events:none;white-space:nowrap}
 .pic .psvL{font-size:15px;font-weight:bold;color:#666;padding:2px 0 0;line-height:1.2}
 .apvT .psv{right:8px;bottom:26px;font-size:11px;padding:1px 5px}
+.apvT .pbad{position:absolute;left:6px;top:32px;font-size:24px;line-height:1;pointer-events:none}
+.apvT.bad{border-color:#D03A2A}
+#apvZH{white-space:pre-line}
 .apvT.on .psv{bottom:50px}
 .apvOS{display:block;font-size:13px;font-weight:bold;color:var(--sub)}
 .apvT .qt{font-size:13px;padding:3px 0 0;white-space:nowrap}
@@ -642,6 +645,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p class="admConn" id="admConn"></p>
   <button class="bb p admApv" id="admApv" data-t="admApvBtn">📋 許可リストの管理</button>
   <p class="src" id="admSrc"></p>
+  <button class="bb s" id="admBadClr" data-t="admBadClr" style="display:none">❗ 合わない写真をもう一度確かめる</button>
   <div class="admLim"><span data-t="admLim">新しい猫(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
   <div class="admLim"><span class="src" id="admUsed"></span><button class="tb" id="admReset" data-t="admReset">0に戻す</button></div>
   <button class="bb s" id="admInit" data-t="admInit">解放を最初に戻す(テスト用)</button>
@@ -685,6 +689,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117230255"></script>
+<script src="app.js?v=20261117231339"></script>
 </body>
 </html>

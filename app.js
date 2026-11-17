@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117230255';
+const APP_VERSION='20261117231339';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -209,6 +209,9 @@ const T={
   admLim:['新しい猫(1日)','あたらしい ねこ(1にち)'],
   admUsed:['今日出た新しい猫','きょう でた あたらしい ねこ'],
   admInit:['解放を最初に戻す(テスト用)','かいほうを さいしょに もどす(テストよう)'],
+  apvBadSz:['この端末で大きさが合いません','この たんまつで おおきさが あいません'],apvBadFp:['この端末で指紋が合いません','この たんまつで しもんが あいません'],
+  admBadClr:['❗ 合わない写真をもう一度確かめる','❗ あわない しゃしんを もう いちど たしかめる'],
+  admBadRe:['確かめ直しています…','たしかめ なおして います…'],admBadReDone:['確かめ直しました','たしかめ なおしました'],
   admAllOn:['全部の猫を「出た猫」に出す(テスト用・アプリを閉じると戻ります)','ぜんぶの ねこを「でた ねこ」に だす(テストよう・アプリを とじると もどります)'],
   admAllOff:['全部の猫を出すのをやめる(テスト中)','ぜんぶの ねこを だすのを やめる(テストちゅう)'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
@@ -525,7 +528,19 @@ function apvNew(){try{const a=JSON.parse(localStorage.getItem(APV_NEW_KEY)||'[]'
 function apvNewSave(s){try{localStorage.setItem(APV_NEW_KEY,JSON.stringify([...s].slice(-60)));}catch(e){}}
 // 指紋が合わなかった写真(番号:指紋)。同じものは読み直さない
 function apvBad(){try{const a=JSON.parse(localStorage.getItem(APV_BAD_KEY)||'[]');return new Set(Array.isArray(a)?a.filter(x=>typeof x==='string'&&/^[0-9]{1,5}:([0-9a-f]{64}|[0-9]{2,5}x[0-9]{2,5})$/.test(x)):[]);}catch(e){return new Set();}}
-function apvBadAdd(k){const s=apvBad();s.add(k);try{localStorage.setItem(APV_BAD_KEY,JSON.stringify([...s].slice(-200)));}catch(e){}}
+// 合わなかったときの実際の様子(大きさ「幅x高さ」か 'fp'=指紋が違う)。管理用の画面に出す
+const APV_BADINFO_KEY='neko-apv-badinfo';
+function apvBadInfo(){try{const o=JSON.parse(localStorage.getItem(APV_BADINFO_KEY)||'{}');return o&&typeof o==='object'&&!Array.isArray(o)?o:{};}catch(e){return {};}}
+function apvBadAdd(k,act){const s=apvBad();s.add(k);try{localStorage.setItem(APV_BAD_KEY,JSON.stringify([...s].slice(-200)));
+  const o=apvBadInfo();if(typeof act==='string'&&/^(fp|[0-9]{1,5}x[0-9]{1,5})$/.test(act))o[k]=act;localStorage.setItem(APV_BADINFO_KEY,JSON.stringify(o));}catch(e){}}
+function apvBadClear(){try{localStorage.removeItem(APV_BAD_KEY);localStorage.removeItem(APV_BADINFO_KEY);}catch(e){}}
+// 合わなかった写真の説明(管理用)。大きさで照合する写真は「記録 幅×高さ/実際 幅×高さ」
+function apvBadText(e){
+  const k=apvBadKey(e);if(!apvBad().has(k))return '';
+  const a=apvBadInfo()[k];
+  if(e.sz&&a&&a!=='fp')return t('apvBadSz')+'('+(kana?'きろく ':'記録 ')+e.sz[0]+'×'+e.sz[1]+(kana?' / じっさい ':'/実際 ')+a.replace('x','×')+')';
+  return t(e.sz?'apvBadSz':'apvBadFp');
+}
 function apvSaveDb(){
   if(apvNoSave)return;
   const list=apvPool.filter(o=>o.blob instanceof Blob).map(o=>({no:o.no,u:o.ou,h:o.h,blob:o.blob}));
@@ -657,7 +672,7 @@ async function initCatsRun(gen){
     await Promise.all(rem.map(async e=>{
       const {img,ready}=loadRemote(e.u,e.sz);
       try{await ready;if(gen!==catGen)return;apvPool.push(apvMakeRemote(e,img,ready));}
-      catch(err){if(err&&err.message==='size'){apvBadAdd(apvBadKey(e));apvStat.bad++;}}
+      catch(err){if(err&&err.message==='size'){apvBadAdd(apvBadKey(e),img.naturalWidth+'x'+img.naturalHeight);apvStat.bad++;}}
       if(dlSt&&gen===catGen){dlSt.done++;dlPaint();}
     }));
     if(gen!==catGen)return;
@@ -669,7 +684,7 @@ async function initCatsRun(gen){
     if(dlSt){dlSt.done=base+todo.indexOf(e);dlPaint();}
     try{
       const {buf,type}=await fetchBytes(e.u);
-      if(await sha256(buf)!==e.h){apvBadAdd(e.no+':'+e.h);apvStat.bad++;continue;}
+      if(await sha256(buf)!==e.h){apvBadAdd(e.no+':'+e.h,'fp');apvStat.bad++;continue;}
       const blob=await bytesToJpeg(buf,type);if(!blob)continue;
       if(gen!==catGen)return;
       apvPool.push(apvMakeItem({no:e.no,u:e.u,h:e.h,blob}));apvSaveDb();
@@ -2091,12 +2106,17 @@ menuVer.addEventListener('pointerup',admLpCancel);
 menuVer.addEventListener('pointercancel',admLpCancel);
 menuVer.addEventListener('pointerleave',admLpCancel);
 menuVer.addEventListener('contextmenu',e=>e.preventDefault());
+// 合わなかった写真の連番「(38番)」(この端末で今の一覧にあるもの)
+function apvBadNos(){
+  if(!apvList)return '';const bad=apvBad(),a=apvList.list.filter(e=>bad.has(apvBadKey(e))).map(e=>apvSeqLabel(e.no));
+  return a.length?(kana?'('+a.join('、')+'ばん)':'('+a.join('、')+'番)'):'';
+}
 function admRender(msgKey){
   $('#admSt').textContent=catKey()?t('admSet'):t('admUnset');
   $('#admMsg').textContent=msgKey?t(msgKey):'';
   const k=kana?'まい':'枚';
   $('#admSrc').textContent=t('admApvSt')+':'+(kana?'いちらん ':'一覧')+apvStat.list+k+(kana?'・ほぞん ':'・保存')+apvPool.length+k+(kana?'・みられる ':'・見られる')+catItems.length+k+(kana?'・のこり ':'・残り')+apvRest().length+k
-    +(apvStat.bad?(kana?'・しもんが あわない ':'・指紋が合わない')+apvStat.bad+k:'')+(apvStat.err?' ('+apvStat.err+')':'');
+    +(apvStat.bad?'・❗'+(kana?'しょうごうが あわない ':'照合が合わない')+apvStat.bad+k+apvBadNos():'')+(apvStat.err?' ('+apvStat.err+')':'');
   $('#admLimV').textContent=catLimit()+k;
   $('#admUsed').textContent=t('admUsed')+':'+catUsed()+k;
   $('#admDb').textContent=t('admDb')+':'+(idbDiag.ok?t('admDbOk'):t('admDbNg'))+(idbDiag.fails?(kana?'(ひらけなかった かいすう '+idbDiag.fails+' '+idbDiag.last+')':'(開けなかった回数 '+idbDiag.fails+' '+idbDiag.last+')'):'')
@@ -2105,6 +2125,7 @@ function admRender(msgKey){
   // キーがあるときは入力欄と「保存する」を隠し、「キーを消す」だけにする
   const hk=!!catKey();$('#admKey').style.display=hk?'none':'';$('#admSave').style.display=hk?'none':'';$('#admDel').style.display=hk?'':'none';
   $('#admAll').textContent=t(catShowAll?'admAllOff':'admAllOn');
+  $('#admBadClr').style.display=apvStat.bad?'':'none';
   if(Date.now()-admInitAt>4000)$('#admInit').textContent=t('admInit');
 }
 // 長押しのあと、確認してから開く(「開かない」を大きく、「開く」は下に離して小さく。外側タップは閉じる)
@@ -2164,6 +2185,7 @@ async function admConn(){
   out.textContent=L.join('\n');b.disabled=false;admConnBusy=false;
 }
 $('#admConnBtn').onclick=admConn;
+$('#admBadClr').onclick=async()=>{const b=$('#admBadClr');b.disabled=true;apvBadClear();apvStat.bad=0;admRender('admBadRe');try{await initCats();}finally{b.disabled=false;admRender('admBadReDone');}};
 $('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRebuild();renderAllPics();renderSel();admRender('');};
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
 // テスト用のボタン(数独の「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
@@ -2247,7 +2269,8 @@ function apvRender(){
   $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')'+apvSrcCount(apvAdmList.list.map(e=>e.u)):(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
   if(apvAdmList)apvAdmList.list.map((e,i)=>[e,i+1]).reverse().forEach(([e,sq])=>{
     const on=d.rm.includes(e.no);
-    cur.appendChild(apvTile(e.u,String(sq),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,seq:sq,sz:e.sz,on}),e.u,!!e.sz));
+    const tl=apvTile(e.u,String(sq),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,seq:sq,sz:e.sz,h:e.h,on}),e.u,!!e.sz);
+    if(apvBadText(e)){tl.appendChild(mk('span','pbad','❗'));tl.classList.add('bad');}cur.appendChild(tl);
   });
   // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
   const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
@@ -2311,7 +2334,7 @@ function apvZPaint(){
   const im=$('#apvZImg'),u=safeImgUrl(z.src);if(im.getAttribute('src')!==u)im.src=u;
   qBind(im,$('#apvZQ'),true,true,false);
   const cur=z.kind==='cur',nc=apvZ.filter(x=>x.kind===z.kind),pos=nc.indexOf(z)+1;
-  $('#apvZH').textContent=(cur?z.seq+t('apvZCur')+'(ID '+z.no+')':t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u)+' ・ '+t(z.sz?'noSaveL':'canSaveL');
+  $('#apvZH').textContent=(cur?z.seq+t('apvZCur')+'(ID '+z.no+')':t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u)+' ・ '+t(z.sz?'noSaveL':'canSaveL')+(cur&&apvBadText(z)?'\n❗'+apvBadText(z):'');
   const s=$('#apvZS');s.textContent=t(cur?(z.on?'apvZRmOn':'apvZRmOff'):(z.on?'apvZOkOn':'apvZOkOff'));s.classList.toggle('on',z.on);
   const b=$('#apvZTg');b.textContent=t(cur?(z.on?'apvZRmNo':'apvZRm'):(z.on?'apvZOkNo':'apvZOk'));
   b.className='bb '+(!cur&&!z.on?'p':'s')+(cur&&!z.on?' del':'');
