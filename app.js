@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117223503';
+const APP_VERSION='20261117225109';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -205,6 +205,9 @@ const T={
   admLim:['新しい猫(1日)','あたらしい ねこ(1にち)'],
   admUsed:['今日出た新しい猫','きょう でた あたらしい ねこ'],
   admInit:['解放を最初に戻す(テスト用)','かいほうを さいしょに もどす(テストよう)'],
+  admAllOn:['全部の猫を「出た猫」に出す(テスト用・アプリを閉じると戻ります)','ぜんぶの ねこを「でた ねこ」に だす(テストよう・アプリを とじると もどります)'],
+  admAllOff:['全部の猫を出すのをやめる(テスト中)','ぜんぶの ねこを だすのを やめる(テストちゅう)'],
+  catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
   admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
   admInitDone:['最初に戻しました','さいしょに もどしました'],
@@ -386,7 +389,7 @@ const APV_OPEN_KEY='neko-apv-open',APV_BAD_KEY='neko-apv-bad',APV_NEW_KEY='neko-
 // 1日に出せる新しい猫(数独のクリアで1枚)。使わなかった分は持ち越さない
 const CAT_LIMIT_KEY='neko-sd-limit',CAT_QUOTA_KEY='neko-sd-quota',CAT_LIMIT_DEF=2,CAT_LIMIT_MAX=50;
 try{localStorage.removeItem('neko-apv-limit');localStorage.removeItem('neko-apv-quota');}catch(e){}
-let catItems=[],catState='idle',catGen=0,apvPool=[],apvList=null,apvNoSave=false,apvFold=true,apvLast=0;
+let catShowAll=false,catItems=[],catState='idle',catGen=0,apvPool=[],apvList=null,apvNoSave=false,apvFold=true,apvLast=0;
 let apvStat={list:0,saved:0,bad:0,err:''};
 function catKey(){try{const k=localStorage.getItem(CAT_KEY)||'';return CAT_KEY_RE.test(k)?k:'';}catch(e){return '';}}
 const jstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
@@ -540,6 +543,8 @@ function apvMakeItem(e){
 function apvRebuild(){
   const ng=new Set(catNg()),by=new Map(apvPool.map(o=>[o.no,o])),cur=selApi>=0?catItems[selApi]:null;
   catItems=apvOpen().filter(n=>by.has(n)&&!ng.has(by.get(n).ou)).map(n=>by.get(n)).reverse();
+  // テスト用:全部の猫を出す(保存しない。アプリを閉じると戻る)。出した猫の記録は変えない
+  if(catShowAll){const seen=new Set(catItems.map(o=>o.no));catItems=catItems.concat(apvPool.filter(o=>!seen.has(o.no)&&!ng.has(o.ou)).sort((a,b)=>b.no-a.no));}
   // 選んでいた写真は、並びが変わっても選んだままにする
   if(selApi>=0)selApi=cur?catItems.indexOf(cur):-1;
 }
@@ -736,7 +741,7 @@ function renderCatPics(){
   if(!show)return;
   del.textContent=t('catDel');
   del.disabled=selApi<0||!catItems[selApi];
-  q.textContent=t('apvClearHelp');
+  q.textContent=catShowAll?t('catAllNote'):t('apvClearHelp');
 }
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:selAlb>=0&&albItems[selAlb]?albItems[selAlb]:images[selPic];
 function renderAllPics(){renderCatPics();renderAlb();renderPics();}
@@ -2084,6 +2089,9 @@ function admRender(msgKey){
   $('#admDb').textContent=t('admDb')+':'+(idbDiag.ok?t('admDbOk'):t('admDbNg'))+(idbDiag.fails?(kana?'(ひらけなかった かいすう '+idbDiag.fails+' '+idbDiag.last+')':'(開けなかった回数 '+idbDiag.fails+' '+idbDiag.last+')'):'')
     +' ・ '+(kana?'ごほうび '+albItems.length+'まい':'ごほうび'+albItems.length+'枚')+(apvNoSave?(kana?'・しゃしんは ほぞん していません':'・写真は保存していません'):'');
   setTg($('#admTest'),testOn());
+  // キーがあるときは入力欄と「保存する」を隠し、「キーを消す」だけにする
+  const hk=!!catKey();$('#admKey').style.display=hk?'none':'';$('#admSave').style.display=hk?'none':'';$('#admDel').style.display=hk?'':'none';
+  $('#admAll').textContent=t(catShowAll?'admAllOff':'admAllOn');
   if(Date.now()-admInitAt>4000)$('#admInit').textContent=t('admInit');
 }
 // 長押しのあと、確認してから開く(「開かない」を大きく、「開く」は下に離して小さく。外側タップは閉じる)
@@ -2143,6 +2151,7 @@ async function admConn(){
   out.textContent=L.join('\n');b.disabled=false;admConnBusy=false;
 }
 $('#admConnBtn').onclick=admConn;
+$('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRebuild();renderAllPics();renderSel();admRender('');};
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
 // テスト用のボタン(数独の「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
