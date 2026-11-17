@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118012215';
+const APP_VERSION='20261118015201';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -93,6 +93,7 @@ const T={
   noGift:['この写真は、クリアしても「ごほうびの絵」に入りません。完成画面で絵を長押しすると、写真アプリに保存できます。','この しゃしんは、クリアしても「ごほうびの え」に はいりません。かんせい がめんで えを ながおしすると、しゃしん アプリに ほぞん できます。'],
   noGiftSd:['途中でやめて「続きから」で遊ぶと、絵はイラストに変わります','とちゅうで やめて「つづきから」で あそぶと、えは イラストに かわります'],
   noGiftJg:['途中でやめると、続きは残りません','とちゅうで やめると、つづきは のこりません'],
+  saveHow:['「📥 iPadに保存」を押したあと、「画像を保存」を押してください','「📥 iPadに ほぞん」を おしたあと、「がぞうを ほぞん」を おしてください'],
   lpHint:['絵を長押しして「写真に追加」でも保存できます','えを ながおしして「しゃしんに ついか」でも ほぞん できます'],
   lpOnly:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
   remoteNote:['この写真は、アプリからは保存できません(完成画面で絵を長押しすると、写真アプリに保存できます)。遊ぶたびに通信で読み込みます','この しゃしんは、アプリからは ほぞん できません(かんせい がめんで えを ながおしすると、しゃしん アプリに ほぞん できます)。あそぶ たびに つうしんで よみこみます'],
@@ -902,14 +903,16 @@ function donePrep(item,sel){
   if(doneUrls[sel]){URL.revokeObjectURL(doneUrls[sel]);doneUrls[sel]=null;}
   qBind(im,$(DONE_PIC[sel][2]),!!item&&!item.nm);
   im.src=safeImgUrl(item?item.url:images[0].url);
-  lp.className='lphint';lp.dataset.k='lpHint';lp.textContent=t('lpHint');
-  if(!canSave(item)){b.style.display='none';g.style.display='none';lp.dataset.k='giftNeed';lp.textContent=t('giftNeed');lp.classList.add('only');doneFiles[sel]=null;return;}
+  // 長押しの保存は案内しない(ボタンの下に「画像を保存」の案内がある)。🎁のない猫は長押しのメニューも出さない
+  lp.className='lphint';lp.dataset.k='';lp.textContent='';lp.style.display='none';
+  const ok=canSave(item);im.classList.toggle('lpok',ok);
+  if(!ok){b.style.display='none';g.style.display='none';lp.dataset.k='giftNeed';lp.textContent=t('giftNeed');lp.classList.add('only');lp.style.display='';doneFiles[sel]=null;return;}
   picFile(item).then(f=>{
     if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;
     if(f){b.disabled=false;const u=URL.createObjectURL(f);doneUrls[sel]=u;im.src=u;}
     else{
       b.style.display='none';g.style.display='none';
-      if(item&&(item.api||item.remote)){lp.dataset.k='lpOnly';lp.textContent=t('lpOnly');lp.classList.add('only');}
+      if(item&&(item.api||item.remote)){lp.dataset.k='lpOnly';lp.textContent=t('lpOnly');lp.classList.add('only');lp.style.display='';}
     }
   });
 }
@@ -927,7 +930,8 @@ function zoomOpen(item){
   // 🎁のない猫・アプリから保存できない写真は、保存ボタンを出さない
   const zs=$('#zoomSave'),zh=$('#zoomHint'),ok=canSave(item);
   zs.style.display=ok&&!item.remote?'':'none';zh.classList.toggle('only',!ok||!!item.remote);
-  zh.dataset.k=!ok?'giftNeed':item.remote?'giftZoomR':'saveHint';zh.textContent=t(zh.dataset.k);
+  zh.dataset.k=!ok?'giftNeed':item.remote?'giftZoomR':'saveHow';zh.textContent=t(zh.dataset.k);
+  $('#zoomImg').classList.toggle('lpok',ok); // 🎁のない猫は長押しのメニュー(「写真に追加」)を出さない
   if(!ok||item.remote)return;
   picFile(item).then(f=>{
     if(zoomTok!==tok)return;
