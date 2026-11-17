@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118015632';
+const APP_VERSION='20261118020108';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -903,9 +903,9 @@ function donePrep(item,sel){
   if(doneUrls[sel]){URL.revokeObjectURL(doneUrls[sel]);doneUrls[sel]=null;}
   qBind(im,$(DONE_PIC[sel][2]),!!item&&!item.nm);
   im.src=safeImgUrl(item?item.url:images[0].url);
-  // 長押しの保存は案内しない(ボタンの下に「画像を保存」の案内がある)。🎁のない猫は長押しのメニューも出さない
+  // 長押しの保存は案内しない(ボタンの下に「画像を保存」の案内がある。長押しの保存そのものは iPad の Safari では止められない)
   lp.className='lphint';lp.dataset.k='';lp.textContent='';lp.style.display='none';
-  const ok=canSave(item);im.classList.toggle('lpok',ok);
+  const ok=canSave(item);
   if(!ok){b.style.display='none';g.style.display='none';lp.dataset.k='giftNeed';lp.textContent=t('giftNeed');lp.classList.add('only');lp.style.display='';doneFiles[sel]=null;return;}
   picFile(item).then(f=>{
     if(doneFiles[sel]!==tok)return;doneFiles[sel]=f;
@@ -919,8 +919,6 @@ function donePrep(item,sel){
 $('#doneSave').onclick=()=>{ensureAudio();const f=doneFiles['#doneSave'];if(f instanceof File)sharePic(f);};
 $('#sdSave').onclick=()=>{ensureAudio();const f=doneFiles['#sdSave'];if(f instanceof File)sharePic(f);};
 
-// 保存してよい絵(.lpok)以外の画像は、長押しのメニューを出さない
-document.addEventListener('contextmenu',e=>{const el=e.target;if(el&&el.tagName==='IMG'&&!el.classList.contains('lpok'))e.preventDefault();});
 /* ====== 絵を大きく見る ====== */
 // 写真アプリに入れやすいよう、表示もJPEGにする(長押し →「写真に追加」)
 let zoomTok=null,zoomFile=null,zoomUrl=null;
@@ -933,7 +931,6 @@ function zoomOpen(item){
   const zs=$('#zoomSave'),zh=$('#zoomHint'),ok=canSave(item);
   zs.style.display=ok&&!item.remote?'':'none';zh.classList.toggle('only',!ok||!!item.remote);
   zh.dataset.k=!ok?'giftNeed':item.remote?'giftZoomR':'saveHow';zh.textContent=t(zh.dataset.k);
-  $('#zoomImg').classList.toggle('lpok',ok); // 🎁のない猫は長押しのメニュー(「写真に追加」)を出さない
   if(!ok||item.remote)return;
   picFile(item).then(f=>{
     if(zoomTok!==tok)return;
