@@ -179,6 +179,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 #apvBarIn{height:100%;width:0;background:var(--pri);border-radius:8px;transition:width .3s}
 .dlg.apv p.apvFindOn{color:var(--ink);font-weight:bold}
 .apvOrd{display:flex;flex-direction:column;gap:8px}
+.apvFixT{font-size:18px!important;font-weight:bold;color:var(--ink)!important;margin:4px 0 2px!important}
+.apvFix{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 4px}
+.apvFix .tb{min-width:60px;min-height:56px;font-size:26px}
+.apvFix b{min-width:5em;text-align:center;font-size:22px}
 .apvO{display:flex;align-items:center;gap:10px;background:#FFF6EC;border:2px solid var(--line);border-radius:14px;padding:6px 8px}
 .apvOT{flex:0 0 auto;width:72px;height:72px;padding:0;border:none;border-radius:10px;overflow:hidden;background:#eee}
 .apvOT img{width:100%;height:100%;object-fit:cover;display:block}
@@ -660,7 +664,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p class="src" id="apvFindMsg"></p>
   <div class="apvBar" id="apvBar" hidden><div id="apvBarIn"></div></div>
   <div class="apvGrid" id="apvCand"></div>
-  <h4 id="apvOrdH" data-t="apvOrdH" style="display:none">許可する写真の順番(上から先に出ます)</h4>
+  <h4 id="apvOrdH" data-t="apvOrdH" style="display:none">出る順番(上から先に出ます)</h4>
+  <div id="apvFixRow" style="display:none"><p class="apvFixT" data-t="apvFixL">家族に出ている写真(ここまでは動かさない)</p><div class="apvFix"><button class="tb" id="apvFixDn">−</button><b id="apvFixV"></b><button class="tb" id="apvFixUp">+</button></div></div>
+  <p class="src" id="apvFixNote"></p>
   <div class="apvOrd" id="apvOrd"></div>
   <p class="apvSum" id="apvSum"></p>
   <button class="bb p" id="apvCopy" data-t="apvCopy">📋 一覧をコピー</button>
@@ -679,6 +685,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117225109"></script>
+<script src="app.js?v=20261117230255"></script>
 </body>
 </html>

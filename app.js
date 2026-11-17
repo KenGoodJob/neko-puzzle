@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117225109';
+const APP_VERSION='20261117230255';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -139,7 +139,11 @@ const T={
   apvZOkOn:['許可する予定です','きょかする よてい です'],apvZOkOff:['まだ許可していません','まだ きょか していません'],
   apvZRm:['外す','はずす'],apvZRmNo:['外すのをやめる','はずすのを やめる'],
   apvZOk:['✓ 許可する','✓ きょかする'],apvZOkNo:['許可をやめる','きょかを やめる'],
-  apvOrdH:['許可する写真の順番(上から先に出ます)','きょかする しゃしんの じゅんばん(うえから さきに でます)'],
+  apvOrdH:['出る順番(上から先に出ます)','でる じゅんばん(うえから さきに でます)'],
+  apvFixL:['家族に出ている写真(ここまでは動かさない)','かぞくに でている しゃしん(ここまでは うごかさない)'],
+  apvFixNote:['これより後ろの公開中の写真と、新しく許可する写真を▲▼で並べ替えられます。家族に出た写真は動かさないでください','これより うしろの こうかいちゅうの しゃしんと、あたらしく きょかする しゃしんを ▲▼で ならべかえられます。かぞくに でた しゃしんは うごかさないで ください'],
+  apvFixNone:['並べ替えられる写真はありません(境を前にすると、公開中の写真も並べ替えられます)','ならべかえられる しゃしんは ありません(さかいを まえに すると、こうかいちゅうの しゃしんも ならべかえられます)'],
+  apvOrdNew:['新しく許可','あたらしく きょか'],
   apvZPrev:['◀ 前','◀ まえ'],apvZNext:['次 ▶','つぎ ▶'],
   qH:['画質','がしつ'],q0:['よい','よい'],q1:['ふつう','ふつう'],q2:['あらめ','あらめ'],
   apvNoChange:['変更はありません','へんこうは ありません'],
@@ -341,7 +345,7 @@ const images=[
   {nm:['窓辺','まどべ'],url:svgUrl(SVG_WINDOW)},
 ].map(o=>Object.assign(o,loadImg(o.url)));
 const SAMPLE_N=images.length; // 数独の完成画面に出す絵(サンプルの猫イラスト)
-const picName=o=>o.nm?o.nm[kana]:t('photoN')+' '+o.no;
+const picName=o=>o.nm?o.nm[kana]:t('photoN')+' '+apvSeqLabel(o.no);
 const COUNTS=[2,3,4,5,6,7,8];
 // 絵の選択:selApi=猫の写真(API)の番号、selAlb=ごほうびの絵の番号(どちらも -1 ならイラスト・iPadの写真の selPic)
 let selPic=0, selN=3, photoNo=0, selApi=-1, selAlb=-1;
@@ -533,6 +537,14 @@ async function apvLoadDb(){
   if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
   return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,APV_MAX);
 }
+// 表示用の連番:許可リストの並び順(1から)。no はアプリが写真を見分ける番号(変えない)。出る順番も並び順
+// 一覧が読めないとき(通信なし)のため、最後に読んだ並び(no の配列)を覚えておく
+const APV_SEQ_KEY='neko-apv-seq';
+let apvSeqMap=new Map();
+try{const a=JSON.parse(localStorage.getItem(APV_SEQ_KEY)||'[]');if(Array.isArray(a))a.filter(n=>Number.isInteger(n)&&n>0&&n<=99999).slice(0,APV_MAX).forEach((n,i)=>{if(!apvSeqMap.has(n))apvSeqMap.set(n,i+1);});}catch(e){}
+function apvSeqSet(list){apvSeqMap=new Map(list.map((e,i)=>[e.no,i+1]));try{localStorage.setItem(APV_SEQ_KEY,JSON.stringify(list.map(e=>e.no)));}catch(e){}}
+const apvSeq=no=>apvSeqMap.get(no)||0;
+const apvSeqLabel=no=>String(apvSeq(no)||'?');
 const apvBadKey=e=>e.no+':'+(e.sz?e.sz[0]+'x'+e.sz[1]:e.h);
 function apvMakeRemote(e,img,ready){return {api:true,remote:true,src:catSrcOf(e.u),ou:e.u,blob:null,url:e.u,img,ready,no:e.no,h:'',sz:e.sz};}
 function apvMakeItem(e){
@@ -544,12 +556,13 @@ function apvRebuild(){
   const ng=new Set(catNg()),by=new Map(apvPool.map(o=>[o.no,o])),cur=selApi>=0?catItems[selApi]:null;
   catItems=apvOpen().filter(n=>by.has(n)&&!ng.has(by.get(n).ou)).map(n=>by.get(n)).reverse();
   // テスト用:全部の猫を出す(保存しない。アプリを閉じると戻る)。出した猫の記録は変えない
-  if(catShowAll){const seen=new Set(catItems.map(o=>o.no));catItems=catItems.concat(apvPool.filter(o=>!seen.has(o.no)&&!ng.has(o.ou)).sort((a,b)=>b.no-a.no));}
+  if(catShowAll){const seen=new Set(catItems.map(o=>o.no));catItems=catItems.concat(apvPool.filter(o=>!seen.has(o.no)&&!ng.has(o.ou)).sort((a,b)=>(apvSeq(b.no)||1e6)-(apvSeq(a.no)||1e6)));}
   // 選んでいた写真は、並びが変わっても選んだままにする
   if(selApi>=0)selApi=cur?catItems.indexOf(cur):-1;
 }
 // まだ解放していない写真(番号の小さい順=古い順)
-function apvRest(){const op=new Set(apvOpen()),ng=new Set(catNg());return apvPool.filter(o=>!op.has(o.no)&&!ng.has(o.ou)).sort((a,b)=>a.no-b.no);}
+// まだ出ていない写真(並び順=出る順。並びが分からない写真は後ろ)
+function apvRest(){const op=new Set(apvOpen()),ng=new Set(catNg());return apvPool.filter(o=>!op.has(o.no)&&!ng.has(o.ou)).sort((a,b)=>(apvSeq(a.no)||1e6+a.no)-(apvSeq(b.no)||1e6+b.no));}
 // n枚解放する。解放できた枚数を返す
 function apvUnlock(n){
   const rest=apvRest().slice(0,n);if(!rest.length)return 0;
@@ -621,7 +634,7 @@ async function initCatsRun(gen){
   // 古い方式の写真(ランダムな6枚)は使わない
   if(!apvNoSave)jgQueue(()=>idbDel('cats'));
   let lst=null;
-  try{lst=await apvFetchList();apvList=lst;apvStat.err='';}catch(e){apvStat.err=String(e&&e.message||e).slice(0,40);}
+  try{lst=await apvFetchList();apvList=lst;apvSeqSet(lst.list);apvStat.err='';}catch(e){apvStat.err=String(e&&e.message||e).slice(0,40);}
   if(gen!==catGen)return;
   // 一覧が読めたら、一覧から外された写真は消す(読めないときは保存した写真で遊ぶ)
   const keep=lst?saved.filter(e=>lst.list.some(x=>x.no===e.no&&x.u===e.u&&x.h===e.h)):saved;
@@ -729,7 +742,7 @@ function renderCatPics(){
   catItems.slice(0,lim).forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
-    const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',String(o.no)));
+    const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',apvSeqLabel(o.no)));
     if(nw.has(o.no))pw.appendChild(mk('span','pnew','NEW'));
     d.append(pw,q);if(o.remote)d.appendChild(mk('div','psvL',t('noSaveS')));qBind(im,q,true);
     d.onclick=()=>{selApi=k;selAlb=-1;const s=apvNew();if(s.delete(o.no))apvNewSave(s);renderAllPics();};
@@ -1998,7 +2011,7 @@ function sdFinish(){
 }
 // クリアで出た新しい猫の知らせ
 let sdNewNo=0;
-function sdNewCatPaint(){const e=$('#sdNewCat');e.style.display=sdNewNo?'':'none';e.textContent=sdNewNo?t('sdNewCat')+(kana?'('+sdNewNo+'ばん)':'('+sdNewNo+'番)'):'';}
+function sdNewCatPaint(){const e=$('#sdNewCat');e.style.display=sdNewNo?'':'none';e.textContent=sdNewNo?t('sdNewCat')+(kana?'('+apvSeqLabel(sdNewNo)+'ばん)':'('+apvSeqLabel(sdNewNo)+'番)'):'';}
 // 最初の画面の数独の「続きから」(絵の小さな画像つき。新しい猫のときは「?」にして中身を見せない)
 let sdThumbUrl=null,sdContGen=0;
 async function renderSdCont(){
@@ -2179,13 +2192,27 @@ const ADM_DRAFT_KEY='neko-adm-draft';
 let apvAdmList=null,apvCands=[],apvFinding=false;
 function admDraft(){
   try{const o=JSON.parse(localStorage.getItem(ADM_DRAFT_KEY)||'null');
-    if(!o||o.v!==1)return {add:[],rm:[]};
+    if(!o||o.v!==1)return {add:[],rm:[],fix:-1,ord:[]};
     const add=Array.isArray(o.add)?o.add.filter(e=>e&&catOkUrl(e.u)&&(!TCA_IMG_RE.test(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)||szOk(e.sz))).map(e=>!TCA_IMG_RE.test(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)?{u:e.u,h:e.h}:{u:e.u,sz:e.sz}).slice(0,APV_ADM_MAX):[];
     const rm=Array.isArray(o.rm)?o.rm.filter(n=>Number.isInteger(n)&&n>0&&n<=99999):[];
-    return {add,rm};
-  }catch(e){return {add:[],rm:[]};}
+    const fix=Number.isInteger(o.fix)&&o.fix>=0&&o.fix<=99999?o.fix:-1;
+    const ord=Array.isArray(o.ord)?o.ord.filter(k=>Number.isInteger(k)&&k>0&&k<=99999||catOkUrl(k)).slice(0,200):[];
+    return {add,rm,fix,ord};
+  }catch(e){return {add:[],rm:[],fix:-1,ord:[]};}
 }
-function admDraftSave(d){try{localStorage.setItem(ADM_DRAFT_KEY,JSON.stringify({v:1,add:d.add,rm:d.rm}));}catch(e){}}
+function admDraftSave(d){try{localStorage.setItem(ADM_DRAFT_KEY,JSON.stringify({v:1,add:d.add,rm:d.rm,fix:d.fix,ord:d.ord}));}catch(e){}}
+// 並べ替えの境:家族に出ているのはこの連番まで(この連番より前は動かさない)。決めていなければ公開中の全部
+function apvFix(d){const n=apvAdmList?apvAdmList.list.length:0;return d.fix>=0?Math.min(d.fix,n):n;}
+// 出る順番を並べ替えられる写真:境より後ろの公開中の写真(外す予定を除く)+新しく許可する写真。d.ord(no か アドレス)をこの範囲に合わせる
+function apvOrdNorm(d){
+  if(!apvAdmList){return [];}
+  const fx=apvFix(d),mov=apvAdmList.list.filter((e,i)=>i>=fx&&!d.rm.includes(e.no)).map(e=>e.no),adds=d.add.map(e=>e.u);
+  const ok=new Set([...mov,...adds]),seen=new Set(),ord=[];
+  d.ord.forEach(k=>{if(ok.has(k)&&!seen.has(k)){seen.add(k);ord.push(k);}});
+  mov.forEach(k=>{if(!seen.has(k)){seen.add(k);ord.push(k);}});
+  adds.forEach(k=>{if(!seen.has(k)){seen.add(k);ord.push(k);}});
+  d.ord=ord;return ord;
+}
 // 公開中の一覧に反映済みのものは下書きから外す
 function admDraftClean(){
   if(!apvAdmList)return admDraft();
@@ -2197,7 +2224,7 @@ function apvTotal(d){return (apvAdmList?apvAdmList.list.length:0)-d.rm.length+d.
 // 上限を超えたら、古い写真(番号の小さい順)から「外す」に入れる
 function apvAutoRm(d){
   if(!apvAdmList)return;
-  const sorted=apvAdmList.list.map(e=>e.no).sort((a,b)=>a-b);
+  const sorted=apvAdmList.list.map(e=>e.no); // 並び順の前(古く出る写真)から
   for(const n of sorted){if(apvTotal(d)<=APV_ADM_MAX)break;if(!d.rm.includes(n))d.rm.push(n);}
 }
 function apvTile(src,label,on,badge,onTap,srcU,noSave){
@@ -2218,9 +2245,9 @@ function apvRender(){
   const add=z=>{const i=apvZ.length;apvZ.push(z);return ()=>apvZOpen(i);};
   const k=kana?'まい':'枚';
   $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')'+apvSrcCount(apvAdmList.list.map(e=>e.u)):(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
-  if(apvAdmList)apvAdmList.list.slice().sort((a,b)=>b.no-a.no).forEach(e=>{
+  if(apvAdmList)apvAdmList.list.map((e,i)=>[e,i+1]).reverse().forEach(([e,sq])=>{
     const on=d.rm.includes(e.no);
-    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,sz:e.sz,on}),e.u,!!e.sz));
+    cur.appendChild(apvTile(e.u,String(sq),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,seq:sq,sz:e.sz,on}),e.u,!!e.sz));
   });
   // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
   const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
@@ -2232,7 +2259,7 @@ function apvRender(){
   $('#apvSum').textContent=(kana?'いま ':'今 ')+(apvAdmList?apvAdmList.list.length:0)+k+' − '+t('apvRm')+' '+d.rm.length+k+' + '+t('apvOk')+' '+d.add.length+k+' = '+tot+k+(kana?'(じょうげん ':'(上限 ')+APV_ADM_MAX+k+')'
     +(over>0?(kana?' あと '+over+'まい はずしてください':' あと'+over+'枚外してください'):'');
   $('#apvSum').classList.toggle('ng',over>0);
-  $('#apvCopy').disabled=!apvAdmList||over>0||(!d.add.length&&!d.rm.length);
+  $('#apvCopy').disabled=!apvAdmList||over>0||!apvChanged();
   $('#apvFind').disabled=apvFinding;
   $('#apvFind').textContent=apvFinding?t('apvFinding'):t('apvFind');
 }
@@ -2241,24 +2268,41 @@ function apvSrcCount(us){const un=kana?'まい':'枚',a=us.filter(u=>catSrcOf(u)
 // 許可する写真の順番(コピーするとき、この順に新しい番号が付く=ご家族に出る順)。▲▼で1つずつ動かす
 function apvOrdRender(d){
   const box=$('#apvOrd');box.replaceChildren();
-  $('#apvOrdH').style.display=d.add.length?'':'none';
-  const next=apvAdmList?apvAdmList.next:0;
-  d.add.forEach((e,i)=>{
-    const c=apvCands.find(x=>x.u===e.u),row=mk('div','apvO');
+  $('#apvOrdH').style.display=apvAdmList?'':'none';$('#apvFixRow').style.display=apvAdmList?'':'none';
+  if(!apvAdmList)return;
+  const n=apvAdmList.list.length,fx=apvFix(d),ord=apvOrdNorm(d);admDraftSave(d);
+  $('#apvFixV').textContent=kana?fx+'ばん まで':fx+'番まで';$('#apvFixDn').disabled=fx<=0;$('#apvFixUp').disabled=fx>=n;
+  $('#apvFixNote').textContent=t(ord.length?'apvFixNote':'apvFixNone');
+  // 境より前で残る写真の数(外す予定を除く)。並べ替える写真の連番はその後ろから
+  const kept=apvAdmList.list.filter((e,i)=>i<fx&&!d.rm.includes(e.no)).length;
+  const byNo=new Map(apvAdmList.list.map((e,i)=>[e.no,{e,sq:i+1}]));
+  ord.forEach((k,i)=>{
+    const pub=typeof k==='number',p=pub?byNo.get(k):null,a=pub?null:d.add.find(x=>x.u===k),c=pub?null:apvCands.find(x=>x.u===k);
+    const u=pub?p.e.u:k,row=mk('div','apvO');
     const th=document.createElement('button');th.className='apvOT';
-    const im=mk('img');im.alt='';im.src=safeImgUrl(c?c.url:e.u);th.appendChild(im);
-    th.onclick=()=>{const k=apvZ.findIndex(z=>z.kind==='cand'&&z.u===e.u);if(k>=0)apvZOpen(k);};
-    const lb=mk('span','apvON',next?(kana?next+i+'ばん':(next+i)+'番'):String(i+1));lb.appendChild(mk('small','apvOS',catSrcShort(e.u)));
+    const im=mk('img');im.alt='';im.src=safeImgUrl(c?c.url:u);th.appendChild(im);
+    th.onclick=()=>{const j=apvZ.findIndex(z=>z.u===u);if(j>=0)apvZOpen(j);};
+    const sq=kept+i+1,lb=mk('span','apvON',kana?sq+'ばん':sq+'番');
+    lb.appendChild(mk('small','apvOS',(pub?(kana?'いま '+p.sq+'ばん':'今 '+p.sq+'番'):t('apvOrdNew'))+' ・ '+catSrcShort(u)));
     const up=mk('button','tb','▲'),dn=mk('button','tb','▼');
-    up.disabled=i===0;dn.disabled=i===d.add.length-1;
+    up.disabled=i===0;dn.disabled=i===ord.length-1;
     up.onclick=()=>apvOrdMove(i,-1);dn.onclick=()=>apvOrdMove(i,1);
     row.append(th,lb,up,dn);box.appendChild(row);
   });
 }
 function apvOrdMove(i,dd){
-  const x=admDraft(),j=i+dd;if(j<0||j>=x.add.length)return;
-  [x.add[i],x.add[j]]=[x.add[j],x.add[i]];admDraftSave(x);apvRender();
+  const x=admDraft();apvOrdNorm(x);const j=i+dd;if(j<0||j>=x.ord.length)return;
+  [x.ord[i],x.ord[j]]=[x.ord[j],x.ord[i]];admDraftSave(x);apvRender();
 }
+function apvFixMove(dd){
+  if(!apvAdmList)return;const x=admDraft(),n=apvAdmList.list.length;
+  const old=apvFix(x);apvOrdNorm(x);x.fix=Math.max(0,Math.min(n,old+dd));
+  // 境を前にしたときは、新しく動かせるようになった写真を今の並び順のまま先頭に入れる
+  if(x.fix<old)x.ord=apvAdmList.list.slice(x.fix,old).filter(e=>!x.rm.includes(e.no)).map(e=>e.no).concat(x.ord);
+  apvOrdNorm(x);admDraftSave(x);apvRender();
+}
+$('#apvFixDn').onclick=()=>apvFixMove(-1);
+$('#apvFixUp').onclick=()=>apvFixMove(1);
 // 拡大表示:写真全体(切り取らない)を大きく出し、中で「許可する/外す」を決める。◀▶・左右スワイプで前後の写真へ
 function apvZOpen(i){apvZi=i;apvZPaint();$('#apvZOv').classList.add('on');}
 function apvZClose(){apvZi=-1;$('#apvZOv').classList.remove('on');$('#apvZImg').removeAttribute('src');}
@@ -2267,7 +2311,7 @@ function apvZPaint(){
   const im=$('#apvZImg'),u=safeImgUrl(z.src);if(im.getAttribute('src')!==u)im.src=u;
   qBind(im,$('#apvZQ'),true,true,false);
   const cur=z.kind==='cur',nc=apvZ.filter(x=>x.kind===z.kind),pos=nc.indexOf(z)+1;
-  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u)+' ・ '+t(z.sz?'noSaveL':'canSaveL');
+  $('#apvZH').textContent=(cur?z.seq+t('apvZCur')+'(ID '+z.no+')':t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u)+' ・ '+t(z.sz?'noSaveL':'canSaveL');
   const s=$('#apvZS');s.textContent=t(cur?(z.on?'apvZRmOn':'apvZRmOff'):(z.on?'apvZOkOn':'apvZOkOff'));s.classList.toggle('on',z.on);
   const b=$('#apvZTg');b.textContent=t(cur?(z.on?'apvZRmNo':'apvZRm'):(z.on?'apvZOkNo':'apvZOk'));
   b.className='bb '+(!cur&&!z.on?'p':'s')+(cur&&!z.on?' del':'');
@@ -2403,11 +2447,22 @@ function apvSrcLine(name,x){
   if(x.dup)why.unshift(t('apvRsDup')+' '+x.dup+un);
   return name+':'+t('apvRsGot')+' '+x.got+un+' → '+t('apvRsOk')+' '+x.ok+un+(why.length?'('+why.join('、')+')':'');
 }
+// 公開中の一覧から変わったか(追加・外す・並べ替え)
+function apvChanged(){
+  if(!apvAdmList)return false;const d=admDraftClean();
+  if(d.add.length||d.rm.length)return true;
+  const ord=apvOrdNorm(d),fx=apvFix(d);
+  return ord.some((k,i)=>k!==apvAdmList.list[fx+i].no);
+}
 // approved.json の中身を作る(1行1枚)
 function apvBuild(){
   const d=admDraftClean();if(!apvAdmList)return '';
   let next=apvAdmList.next;
-  const list=apvAdmList.list.filter(e=>!d.rm.includes(e.no)).concat(d.add.map(e=>e.sz?{no:next++,u:e.u,sz:e.sz}:{no:next++,u:e.u,h:e.h})).sort((a,b)=>a.no-b.no);
+  // 並び順=出る順。境より前はそのまま、後ろは並べ替えた順。新しく許可する写真には並べた順に新しい ID(no)を付ける
+  const fx=apvFix(d),ord=apvOrdNorm(d),byNo=new Map(apvAdmList.list.map(e=>[e.no,e]));
+  const list=apvAdmList.list.filter((e,i)=>i<fx&&!d.rm.includes(e.no)).concat(ord.map(k=>{
+    if(typeof k==='number')return byNo.get(k);
+    const e=d.add.find(x=>x.u===k);return e.sz?{no:next++,u:e.u,sz:e.sz}:{no:next++,u:e.u,h:e.h};}));
   return '{"v":1,"next":'+next+',"list":[\n'+list.map(e=>JSON.stringify(e.sz?{no:e.no,u:e.u,sz:e.sz}:{no:e.no,u:e.u,h:e.h})).join(',\n')+'\n]}\n';
 }
 $('#admApv').onclick=apvAdmOpen;
