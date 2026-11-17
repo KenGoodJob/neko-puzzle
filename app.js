@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118015201';
+const APP_VERSION='20261118015632';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -919,6 +919,8 @@ function donePrep(item,sel){
 $('#doneSave').onclick=()=>{ensureAudio();const f=doneFiles['#doneSave'];if(f instanceof File)sharePic(f);};
 $('#sdSave').onclick=()=>{ensureAudio();const f=doneFiles['#sdSave'];if(f instanceof File)sharePic(f);};
 
+// 保存してよい絵(.lpok)以外の画像は、長押しのメニューを出さない
+document.addEventListener('contextmenu',e=>{const el=e.target;if(el&&el.tagName==='IMG'&&!el.classList.contains('lpok'))e.preventDefault();});
 /* ====== 絵を大きく見る ====== */
 // 写真アプリに入れやすいよう、表示もJPEGにする(長押し →「写真に追加」)
 let zoomTok=null,zoomFile=null,zoomUrl=null;
