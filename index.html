@@ -128,6 +128,16 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .pic .pno{position:absolute;left:12px;top:12px;min-width:34px;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,.92);color:var(--ink);font-size:17px;font-weight:bold;font-variant-numeric:tabular-nums;text-align:center;pointer-events:none}
 .pic .pnew{position:absolute;left:12px;bottom:12px;padding:2px 10px;border-radius:12px;background:#D9480F;color:#fff;font-size:16px;font-weight:bold;pointer-events:none}
 .more.fold{min-width:320px}
+/* 新しい写真の読み込み中の案内(最初の画面の上) */
+.dlBox{width:100%;max-width:980px;background:#FFF6D6;border:4px solid #E8C24A;border-radius:22px;padding:14px 20px;margin:0 0 16px}
+.dlBox[hidden]{display:none}
+.dlMsg{font-size:24px;font-weight:bold;margin:0 0 10px;color:var(--ink)}
+.dlSub{font-size:20px;margin:10px 0 0;color:var(--sub)}
+.dlBar{height:22px;border-radius:11px;background:#fff;border:2px solid #E8C24A;overflow:hidden}
+#dlBarIn{height:100%;width:0;background:var(--pri);border-radius:9px;transition:width .4s}
+.dlBar.ind #dlBarIn{width:30%;animation:dlInd 1.6s ease-in-out infinite}
+@keyframes dlInd{0%{margin-left:-30%}100%{margin-left:100%}}
+.kana .dlMsg,.kana .dlSub{word-break:keep-all;overflow-wrap:anywhere}
 .adm .admApv{width:100%;margin:6px 0 10px}
 .adm .admConn{font-size:18px;font-weight:bold;white-space:pre-line;text-align:left;margin:0 0 8px;line-height:1.5}
 .adm .admConn:empty{display:none}
@@ -380,6 +390,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div><div class="ver" id="menuVer"></div></div>
   <h1>🐱 ねこの脳トレパズル</h1>
   <p class="lead" data-t="menuLead">数独を解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます</p>
+  <div class="dlBox" id="dlBox" hidden><p class="dlMsg" id="dlMsg"></p><div class="dlBar"><div id="dlBarIn"></div></div><p class="dlSub" id="dlSub"></p></div>
   <button class="cont jg" id="jgCont" style="display:none"></button>
   <button class="cont jg" id="sdCont" style="display:none"></button>
   <h2 class="new" id="menuHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
@@ -394,6 +405,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="more del" id="catDel"></button>
   </div>
   <p class="catQuota" id="catQuota" style="display:none"></p>
+  <div class="catBtns" id="catReBox" style="display:none"><button class="more" id="catRe" data-t="catRe">🔄 写真を表示し直す</button></div>
   <div id="albSec" hidden>
   <h3 class="subh s2" id="albH"></h3>
   <p class="catMsg on" id="albMsg" data-t="albEmpty">猫の写真のパズルをクリアすると、ここに入ります</p>
@@ -652,6 +664,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117213356"></script>
+<script src="app.js?v=20261117215103"></script>
 </body>
 </html>

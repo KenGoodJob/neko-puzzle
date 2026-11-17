@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117213356';
+const APP_VERSION='20261117215103';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -141,6 +141,12 @@ const T={
   testFill:['🛠 答えを埋める(テスト用)','🛠 こたえを うめる(テストよう)'],
   testJg:['🛠 全部はめる(テスト用)','🛠 ぜんぶ はめる(テストよう)'],
   catLoading:['猫の写真を読み込んでいます。少しお待ちください','ねこの しゃしんを よみこんでいます。すこし おまちください'],
+  dlList:['猫の写真の一覧を確かめています','ねこの しゃしんの いちらんを たしかめています'],
+  dlNow:['新しい猫の写真を読み込んでいます','あたらしい ねこの しゃしんを よみこんでいます'],
+  dlWait:['しばらくお待ちください(数分かかることがあります)','しばらく おまちください(すうふん かかる ことが あります)'],
+  catRe:['🔄 写真を表示し直す','🔄 しゃしんを ひょうじ しなおす'],
+  catReBusy:['写真を読み込んでいます。終わるまでお待ちください','しゃしんを よみこんでいます。おわるまで おまちください'],
+  catReDone:['写真を表示し直しました','しゃしんを ひょうじ しなおしました'],
   catCredit:['写真:The Cat API / cataas','しゃしん:The Cat API / cataas'],
   hFlip:['③ 絵の向き','③ えの むき'],
   f0:['そのまま','そのまま'],f0d:['見たとおり','みた とおり'],
@@ -555,9 +561,27 @@ function renderSdCard(){
   const m=sdMode();$('#sdPicMsg').textContent=t(m==='new'?'sdmNew':m==='limit'?'sdmLimit':m==='none'?'sdmNone':m==='illust'?'sdmIllust':'catLoading');
 }
 // 起動時:保存した写真を出し、許可リストを読み、まだ保存していない写真を読み込む
+// 写真の読み込みの案内(最初の画面の上):一覧を確かめている間は動く棒、新しい写真を読み込む間は「3 / 10枚」と棒
+let dlSt=null;
+function dlPaint(){
+  const box=$('#dlBox');
+  if(!dlSt){box.hidden=true;return;}
+  box.hidden=false;
+  const bar=box.querySelector('.dlBar'),un=kana?'まい':'枚';
+  if(dlSt.total){
+    $('#dlMsg').textContent=t('dlNow')+' '+Math.min(dlSt.done+1,dlSt.total)+' / '+dlSt.total+un;
+    bar.classList.remove('ind');$('#dlBarIn').style.width=Math.round(dlSt.done/dlSt.total*100)+'%';
+  }else{$('#dlMsg').textContent=t('dlList');bar.classList.add('ind');$('#dlBarIn').style.width='';}
+  $('#dlSub').textContent=t('dlWait');
+}
+function dlEnd(gen){if(gen===catGen){dlSt=null;dlPaint();}}
 async function initCats(){
   const gen=++catGen;apvLast=Date.now();
+  dlSt={done:0,total:0};dlPaint();
   if(!catItems.length){catState='loading';renderCatPics();}
+  try{await initCatsRun(gen);}finally{dlEnd(gen);}
+}
+async function initCatsRun(gen){
   let saved=[];
   try{saved=await apvLoadDb();apvNoSave=false;}catch(e){apvNoSave=true;}
   if(gen!==catGen)return;
@@ -573,14 +597,17 @@ async function initCats(){
   if(lst&&keep.length!==saved.length)apvSaveDb();
   apvRebuild();apvTopUp();
   catState='ok';apvStat.list=lst?lst.list.length:apvStat.list;apvStat.saved=apvPool.length;
-  renderAllPics();
+  renderAllPics();renderSel();
   if(!lst)return;
   // まだ保存していない写真を読み込み、指紋が一致したものだけ保存する
   const have=new Set(apvPool.map(o=>o.no)),bad=apvBad(),ng=new Set(catNg());
   apvStat.bad=lst.list.filter(e=>bad.has(e.no+':'+e.h)).length;
   const todo=lst.list.filter(e=>!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
+  if(!todo.length)return;
+  dlSt={done:0,total:todo.length};dlPaint();
   for(const e of todo){
     if(gen!==catGen)return;
+    if(dlSt){dlSt.done=todo.indexOf(e);dlPaint();}
     try{
       const {buf,type}=await fetchBytes(e.u);
       if(await sha256(buf)!==e.h){apvBadAdd(e.no+':'+e.h);apvStat.bad++;continue;}
@@ -591,8 +618,16 @@ async function initCats(){
       apvRebuild();apvTopUp();renderAllPics();
     }catch(err){}
   }
-  renderAllPics();
+  renderAllPics();renderSel();
 }
+// 「🔄 写真を表示し直す」:一覧を読み直し、iPad 内の写真から表示を作り直す(読み込み中は待ってもらう)
+$('#catRe').onclick=async()=>{
+  ensureAudio();
+  if(dlSt){toast('catReBusy',2600);return;}
+  const b=$('#catRe');b.disabled=true;
+  try{await initCats();}finally{b.disabled=false;}
+  toast('catReDone',2000);
+};
 // 選んだ写真を消す(確認のあと)。不適切な画像が紛れたとき用。消した写真は二度と出さない(猫の写真・ごほうびの絵の両方から消す)
 function catDelAsk(){const k=selApi;if(catState==='ok'&&catItems[k])delOpen('cat',k,catItems[k]);}
 function albDelAsk(){const k=selAlb;if(albItems[k])delOpen('alb',k,albItems[k]);}
@@ -636,6 +671,7 @@ function renderCatPics(){
   $('#catCredit').style.display=show&&catItems.length?'':'none';
   $('#catBtns').style.display=show&&catItems.length?'':'none';
   q.style.display=show?'':'none';
+  $('#catReBox').style.display=show?'':'none';
   renderSdCard();
   if(catState==='loading'){
     for(let i=0;i<APV_FIRST;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
@@ -847,6 +883,7 @@ let lastSec=null;
 function applyLang(){
   document.body.classList.toggle('kana',kana===1);
   document.querySelectorAll('[data-t]').forEach(e=>{e.textContent=t(e.dataset.t);});
+  dlPaint();
   document.querySelectorAll('.lgb').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===kana));
   renderPics();renderCatPics();renderAlb();renderCounts();renderRots();renderFlips();
   if(lastSec!=null)$('#doneMsg').textContent=doneText(lastSec);
