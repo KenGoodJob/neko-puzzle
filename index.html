@@ -129,6 +129,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .pic .pnew{position:absolute;left:12px;bottom:12px;padding:2px 10px;border-radius:12px;background:#D9480F;color:#fff;font-size:16px;font-weight:bold;pointer-events:none}
 .more.fold{min-width:320px}
 .adm .admApv{width:100%;margin:6px 0 10px}
+.adm .admConn{font-size:18px;font-weight:bold;white-space:pre-line;text-align:left;margin:0 0 8px;line-height:1.5}
+.adm .admConn:empty{display:none}
 .adm .tg{min-height:70px;font-size:22px;margin-top:8px}
 .dlg .tg.test{min-height:70px;font-size:22px;border-style:dashed}
 /* 許可リストの管理 */
@@ -143,6 +145,9 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .apvT img{border-radius:10px}
 .apvT .pno{left:8px;top:8px;font-size:14px;min-width:26px;padding:1px 6px}
 .apvT.on{border-color:var(--pri)}
+.apvT .psrc{position:absolute;right:8px;top:8px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.92);color:#6B4A2B;font-size:12px;font-weight:bold;pointer-events:none;white-space:nowrap}
+.apvT .psrc.tca{background:#2B6CB0;color:#fff}
+.apvOS{display:block;font-size:13px;font-weight:bold;color:var(--sub)}
 .apvT .qt{font-size:13px;padding:3px 0 0;white-space:nowrap}
 .apvT .apvB{bottom:24px!important;border-radius:0!important}
 .apvT .apvB{position:absolute;inset:auto 4px 4px 4px;background:rgba(224,113,58,.92);color:#fff;font-size:16px;font-weight:bold;border-radius:0 0 10px 10px;text-align:center;padding:2px 0;pointer-events:none}
@@ -603,6 +608,8 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb p" id="admSave" data-t="admSave">保存する</button>
   </div>
   <p class="admMsg" id="admMsg"></p>
+  <button class="bb s admApv" id="admConnBtn" data-t="admConnBtn">🔌 接続を確かめる</button>
+  <p class="admConn" id="admConn"></p>
   <button class="bb p admApv" id="admApv" data-t="admApvBtn">📋 許可リストの管理</button>
   <p class="src" id="admSrc"></p>
   <div class="admLim"><span data-t="admLim">新しい猫(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
@@ -645,6 +652,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117025417"></script>
+<script src="app.js?v=20261117213356"></script>
 </body>
 </html>

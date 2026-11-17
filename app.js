@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117025417';
+const APP_VERSION='20261117213356';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -117,6 +117,12 @@ const T={
   apvP1:['① 候補を集めています','① こうほを あつめています'],
   apvP2:['② 写真を確かめています','② しゃしんを たしかめています'],
   apvPFound:['見つかった写真','みつかった しゃしん'],
+  apvSrcH:['出所:','でどころ:'],
+  apvRsNoKey:['キーがないので探していません','キーが ないので さがして いません'],
+  apvRsErr:['問い合わせに失敗','といあわせに しっぱい'],
+  apvRsGot:['もらった','もらった'],apvRsOk:['使える','つかえる'],apvRsDup:['登録済み','とうろくずみ'],
+  apvRsCors:['持ち出せない','もちだせない'],apvRsChg:['中身が変わる','なかみが かわる'],apvRsType:['形式が違う','けいしきが ちがう'],
+  apvRsSize:['大きさが合わない','おおきさが あわない'],apvRsLoad:['表示できない','ひょうじ できない'],apvRsHttp:['取得に失敗','しゅとくに しっぱい'],
   apvPWait:['数分かかります。この画面のままお待ちください','すうふん かかります。この がめんの まま おまちください'],
   apvCopy:['📋 一覧をコピー','📋 いちらんを コピー'],
   apvCopied:['コピーしました。Claudeのチャットに貼り付けてください','コピー しました。Claudeの チャットに はりつけてください'],
@@ -179,7 +185,10 @@ const T={
   admP:['The Cat API のキー','The Cat API の キー'],
   admSet:['キー:設定済み','キー:せっていずみ'],admUnset:['キー:未設定','キー:みせってい'],
   admSave:['保存する','ほぞんする'],admDel:['キーを消す','キーを けす'],
-  admSaved:['保存しました','ほぞんしました'],admDeleted:['消しました','けしました'],
+  admSaved:['保存しました','ほぞんしました'],
+  admConnBtn:['🔌 接続を確かめる','🔌 せつぞくを たしかめる'],admConnIng:['確かめています…','たしかめて います…'],
+  admCKey:['キー','キー'],admCImg:['写真の持ち出し','しゃしんの もちだし'],admCNoKey:['キーが保存されていません','キーが ほぞん されて いません'],
+  admCBadKey:['キーが正しくないようです','キーが ただしく ない ようです'],admCNg:['つながりません','つながりません'],admCOk:['つながりました','つながりました'],admDeleted:['消しました','けしました'],
   admBad:['キーの形式が正しくありません','キーの けいしきが ただしく ありません'],
   admSrc:['前回の写真の取得元','ぜんかいの しゃしんの しゅとくもと'],
   admLim:['新しい猫(1日)','あたらしい ねこ(1にち)'],
@@ -380,6 +389,9 @@ function catUse(){try{localStorage.setItem(CAT_QUOTA_KEY,JSON.stringify({d:jstDa
 function catUseReset(){try{localStorage.removeItem(CAT_QUOTA_KEY);}catch(e){}}
 const catLeft=()=>Math.max(0,catLimit()-catUsed());
 const catSrcOf=u=>TCA_IMG_RE.test(u)?'thecatapi':'cataas';
+// 管理用の画面に出す出所の名前(短い札と長い名前)
+const catSrcShort=u=>TCA_IMG_RE.test(u)?'Cat API':'cataas';
+const catSrcName=u=>TCA_IMG_RE.test(u)?'The Cat API':'cataas';
 const catOkUrl=u=>typeof u==='string'&&(TCA_IMG_RE.test(u)||CATAAS_IMG_RE.test(u));
 function fetchJson(url,opt,ms){
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),ms);
@@ -1989,7 +2001,7 @@ function admAsk(){ensureAudio();tone(660,0,.15,.08);$('#admAskOv').classList.add
 $('#admAskOv').onclick=e=>{if(e.target.id==='admAskOv')$('#admAskOv').classList.remove('on');};
 $('#admAskNo').onclick=()=>$('#admAskOv').classList.remove('on');
 $('#admAskYes').onclick=()=>{$('#admAskOv').classList.remove('on');admOpen();};
-function admOpen(){admInitAt=0;$('#admKey').value='';admRender('');$('#admOv').classList.add('on');}
+function admOpen(){admInitAt=0;$('#admKey').value='';if(!admConnBusy)$('#admConn').textContent='';admRender('');$('#admOv').classList.add('on');}
 function admAfterChange(){renderCatPics();}
 function admSetLimit(d){
   const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
@@ -2012,8 +2024,35 @@ $('#admSave').onclick=()=>{
   if(!CAT_KEY_RE.test(v)){admRender('admBad');return;}
   try{localStorage.setItem(CAT_KEY,v);}catch(e){}
   $('#admKey').value='';admAfterChange();admRender('admSaved');
+  if(!admConnBusy)$('#admConn').textContent='';
 };
 $('#admDel').onclick=()=>{try{localStorage.removeItem(CAT_KEY);}catch(e){}$('#admKey').value='';admAfterChange();admRender('admDeleted');};
+// つながるか確かめる:The Cat API(キー・写真のアドレス・写真の持ち出し)と cataas。結果は ✓/✗ と決めた言葉・HTTP の番号だけ
+let admConnBusy=false;
+async function admConn(){
+  if(admConnBusy)return;admConnBusy=true;
+  const out=$('#admConn'),b=$('#admConnBtn');b.disabled=true;out.textContent=t('admConnIng');
+  const L=[],k=catKey(),why=e=>apvErrWhy(e,true);
+  if(!k)L.push('✗ The Cat API:'+t('admCNoKey'));
+  else{
+    let ok=false;
+    try{const a=await fetchJson('https://api.thecatapi.com/v1/favourites?limit=1',{headers:{'x-api-key':k}},10000);
+      if(!Array.isArray(a))throw new Error('form');ok=true;L.push('✓ The Cat API '+t('admCKey')+':'+t('admCOk'));}
+    catch(e){const w=why(e);L.push('✗ The Cat API '+t('admCKey')+':'+(/^HTTP 40[13]$/.test(w)?t('admCBadKey'):t('admCNg'))+'('+w+')');}
+    if(ok){
+      try{const a=await fetchJson('https://api.thecatapi.com/v1/images/search?limit=1&mime_types=jpg,png',{headers:{'x-api-key':k}},10000);
+        const u=Array.isArray(a)&&a[0]&&typeof a[0].url==='string'&&TCA_IMG_RE.test(a[0].url)?a[0].url:'';
+        if(!u)throw new Error('form');
+        await fetchBytes(u,20000);L.push('✓ The Cat API '+t('admCImg')+':'+t('admCOk'));}
+      catch(e){const w=apvErrWhy(e,false);L.push('✗ The Cat API '+t('admCImg')+':'+(e&&e.message==='form'?t('apvRsType'):t(w)));}
+    }
+  }
+  try{const o=await fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36),null,15000);
+    if(!o||typeof o!=='object')throw new Error('form');L.push('✓ cataas:'+t('admCOk'));}
+  catch(e){L.push('✗ cataas:'+t('admCNg')+'('+why(e)+')');}
+  out.textContent=L.join('\n');b.disabled=false;admConnBusy=false;
+}
+$('#admConnBtn').onclick=admConn;
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
 // テスト用のボタン(数独の「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
@@ -2062,11 +2101,12 @@ function apvAutoRm(d){
   const sorted=apvAdmList.list.map(e=>e.no).sort((a,b)=>a-b);
   for(const n of sorted){if(apvTotal(d)<=APV_ADM_MAX)break;if(!d.rm.includes(n))d.rm.push(n);}
 }
-function apvTile(src,label,on,badge,onTap){
+function apvTile(src,label,on,badge,onTap,srcU){
   const b=document.createElement('button');b.className='pic apvT'+(on?' on':'');
   const im=mk('img');im.alt='';im.src=safeImgUrl(src);
   const q=mk('div','qt');b.append(im,q);qBind(im,q,true,true,true);
   if(label)b.appendChild(mk('span','pno',label));
+  if(typeof src==='string')b.appendChild(mk('span','psrc'+(catSrcOf(srcU)==='thecatapi'?' tca':''),catSrcShort(srcU)));
   if(on)b.appendChild(mk('span','apvB',badge));
   b.onclick=onTap;return b;
 }
@@ -2077,15 +2117,15 @@ function apvRender(){
   const zk=apvZi>=0&&apvZ[apvZi]?apvZ[apvZi].kind+'|'+apvZ[apvZi].u:'';apvZ=[];
   const add=z=>{const i=apvZ.length;apvZ.push(z);return ()=>apvZOpen(i);};
   const k=kana?'まい':'枚';
-  $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')':(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
+  $('#apvSt').textContent=apvAdmList?(kana?'こうかいちゅう ':'公開中 ')+apvAdmList.list.length+k+(kana?'(つぎの ばんごう ':'(次の番号 ')+apvAdmList.next+')'+apvSrcCount(apvAdmList.list.map(e=>e.u)):(kana?'いちらんを よみこめませんでした':'一覧を読み込めませんでした');
   if(apvAdmList)apvAdmList.list.slice().sort((a,b)=>b.no-a.no).forEach(e=>{
     const on=d.rm.includes(e.no);
-    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,on})));
+    cur.appendChild(apvTile(e.u,String(e.no),on,t('apvRm'),add({kind:'cur',u:e.u,src:e.u,no:e.no,on}),e.u));
   });
   // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
   const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
-  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,on:true}))));
-  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,on})));});
+  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,on:true}),e.u)));
+  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,on}),c.u));});
   apvOrdRender(d);
   if(apvZi>=0){const i=apvZ.findIndex(z=>z.kind+'|'+z.u===zk);if(i>=0){apvZi=i;apvZPaint();}else apvZClose();}
   const tot=apvTotal(d),over=tot-APV_ADM_MAX;
@@ -2096,6 +2136,8 @@ function apvRender(){
   $('#apvFind').disabled=apvFinding;
   $('#apvFind').textContent=apvFinding?t('apvFinding'):t('apvFind');
 }
+// 出所ごとの枚数「 ・ The Cat API 0枚 ・ cataas 32枚」
+function apvSrcCount(us){const un=kana?'まい':'枚',a=us.filter(u=>catSrcOf(u)==='thecatapi').length;return ' ・ The Cat API '+a+un+' ・ cataas '+(us.length-a)+un;}
 // 許可する写真の順番(コピーするとき、この順に新しい番号が付く=ご家族に出る順)。▲▼で1つずつ動かす
 function apvOrdRender(d){
   const box=$('#apvOrd');box.replaceChildren();
@@ -2106,7 +2148,7 @@ function apvOrdRender(d){
     const th=document.createElement('button');th.className='apvOT';
     const im=mk('img');im.alt='';im.src=safeImgUrl(c?c.url:e.u);th.appendChild(im);
     th.onclick=()=>{const k=apvZ.findIndex(z=>z.kind==='cand'&&z.u===e.u);if(k>=0)apvZOpen(k);};
-    const lb=mk('span','apvON',next?(kana?next+i+'ばん':(next+i)+'番'):String(i+1));
+    const lb=mk('span','apvON',next?(kana?next+i+'ばん':(next+i)+'番'):String(i+1));lb.appendChild(mk('small','apvOS',catSrcShort(e.u)));
     const up=mk('button','tb','▲'),dn=mk('button','tb','▼');
     up.disabled=i===0;dn.disabled=i===d.add.length-1;
     up.onclick=()=>apvOrdMove(i,-1);dn.onclick=()=>apvOrdMove(i,1);
@@ -2125,7 +2167,7 @@ function apvZPaint(){
   const im=$('#apvZImg'),u=safeImgUrl(z.src);if(im.getAttribute('src')!==u)im.src=u;
   qBind(im,$('#apvZQ'),true,true,false);
   const cur=z.kind==='cur',nc=apvZ.filter(x=>x.kind===z.kind),pos=nc.indexOf(z)+1;
-  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length;
+  $('#apvZH').textContent=(cur?z.no+t('apvZCur'):t('apvZCand'))+' '+pos+' / '+nc.length+' ・ '+t('apvSrcH')+catSrcName(z.u);
   const s=$('#apvZS');s.textContent=t(cur?(z.on?'apvZRmOn':'apvZRmOff'):(z.on?'apvZOkOn':'apvZOkOff'));s.classList.toggle('on',z.on);
   const b=$('#apvZTg');b.textContent=t(cur?(z.on?'apvZRmNo':'apvZRm'):(z.on?'apvZOkNo':'apvZOk'));
   b.className='bb '+(!cur&&!z.on?'p':'s')+(cur&&!z.on?' del':'');
@@ -2178,15 +2220,22 @@ async function apvFind(){
   d.add.forEach(e=>skip.add(e.u));apvCands.forEach(c=>skip.add(c.u));
   let urls=[];
   const k=catKey(),nc=k?6:12;
+  // 出所ごとの結果(終わったあとに出す。どちらの出所から写真が取れなかったか、理由を確かめる用)
+  const S={thecatapi:{q:k?'':'nokey',e:'',got:0,dup:0,ok:0,ng:{}},cataas:{q:'',e:'',got:0,dup:0,ok:0,ng:{}}};
   const P=apvFP={ph:1,done:0,total:nc+(k?1:0),ok:0,t0:Date.now()};
   const tick=pr=>pr.finally(()=>{P.done++;apvFPaint();});
   apvFPaint();clearInterval(apvFTm);apvFTm=setInterval(apvFPaint,1000);
   const tca=k?tick(fetchJson('https://api.thecatapi.com/v1/images/search?limit=10&mime_types=jpg,png',{headers:{'x-api-key':k}},10000)).then(a=>{
-    if(Array.isArray(a))urls=urls.concat(a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean));}).catch(()=>{}):Promise.resolve();
+    S.thecatapi.q='ok';
+    if(Array.isArray(a))urls=urls.concat(a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean));}).catch(e=>{S.thecatapi.q='err';S.thecatapi.e=apvErrWhy(e,true);}):Promise.resolve();
   const rs=await Promise.allSettled(Array.from({length:nc},(_,i)=>tick(fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000))));
   await tca;
+  S.cataas.q=rs.some(r=>r.status==='fulfilled')?'ok':'err';
+  if(S.cataas.q==='err')S.cataas.e=apvErrWhy(rs[0]&&rs[0].reason,true);
   rs.forEach(r=>{if(r.status!=='fulfilled'||!r.value||typeof r.value!=='object')return;const o=r.value,id=typeof o.id==='string'?o.id:(typeof o._id==='string'?o._id:'');if(CATAAS_ID_RE.test(id))urls.push('https://cataas.com/cat/'+id);});
-  urls=[...new Set(urls)].filter(u=>!skip.has(u));
+  urls=[...new Set(urls)];
+  urls.forEach(u=>{const x=S[catSrcOf(u)];x.got++;if(skip.has(u))x.dup++;});
+  urls=urls.filter(u=>!skip.has(u));
   let ok=0,ng=0,i=0;
   P.ph=2;P.done=0;P.total=urls.length;apvFPaint();
   const work=async()=>{
@@ -2198,8 +2247,8 @@ async function apvFind(){
         if(h!==await sha256(b.buf))throw new Error('changed');
         const url=URL.createObjectURL(new Blob([a.buf],{type:a.type}));
         try{await loadCatImg(url);}catch(e){URL.revokeObjectURL(url);throw e;}
-        apvCands.push({u,h,url});ok++;P.ok=ok;apvRender();
-      }catch(e){ng++;}
+        apvCands.push({u,h,url});ok++;S[catSrcOf(u)].ok++;P.ok=ok;apvRender();
+      }catch(e){ng++;const x=S[catSrcOf(u)].ng,w=apvErrWhy(e,false);x[w]=(x[w]||0)+1;}
       P.done++;apvFPaint();
     }
   };
@@ -2208,8 +2257,32 @@ async function apvFind(){
   const sec=Math.floor((Date.now()-P.t0)/1000);
   apvFinding=false;
   const msg=$('#apvFindMsg');msg.classList.remove('apvFindOn');msg.style.whiteSpace='';$('#apvBar').hidden=true;
-  msg.textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+'(⏱ '+apvFTime(sec)+')'+(ng?(kana?'(もちだせない・なかみが かわる しゃしん '+ng+'まいは のぞきました)':'(持ち出せない・中身が変わる写真'+ng+'枚は除きました)'):'');
+  msg.textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+'(⏱ '+apvFTime(sec)+')'+(ng?(kana?'(もちだせない・なかみが かわる しゃしん '+ng+'まいは のぞきました)':'(持ち出せない・中身が変わる写真'+ng+'枚は除きました)'):'')
+    +'\n'+apvSrcLine('The Cat API',S.thecatapi)+'\n'+apvSrcLine('cataas',S.cataas);
+  msg.style.whiteSpace='pre-line';
   apvRender();
+}
+// 失敗の理由を短い言葉のキーに(画面には決めた言葉と HTTP の番号だけを出す)
+function apvErrWhy(e,q){
+  const m=e&&typeof e.message==='string'?e.message:'';
+  const h=/^HTTP (\d{3})$/.exec(m);
+  if(q)return h?'HTTP '+h[1]:(e&&e.name==='AbortError'?(kana?'じかんぎれ':'時間切れ'):(kana?'つうしん できない':'通信できない'));
+  if(h)return 'apvRsHttp';
+  if(m==='changed')return 'apvRsChg';
+  if(m==='type')return 'apvRsType';
+  if(m==='size')return 'apvRsSize';
+  if(m==='small'||m==='load'||m==='timeout')return 'apvRsLoad';
+  if(e&&e.name==='AbortError')return 'apvRsHttp';
+  return 'apvRsCors';
+}
+// 「The Cat API:もらった10枚 → 使える0枚(持ち出せない10枚)」
+function apvSrcLine(name,x){
+  const un=kana?'まい':'枚';
+  if(x.q==='nokey')return name+':'+t('apvRsNoKey');
+  if(x.q==='err')return name+':'+t('apvRsErr')+'('+x.e+')';
+  const why=Object.keys(x.ng).map(w=>t(w)+' '+x.ng[w]+un);
+  if(x.dup)why.unshift(t('apvRsDup')+' '+x.dup+un);
+  return name+':'+t('apvRsGot')+' '+x.got+un+' → '+t('apvRsOk')+' '+x.ok+un+(why.length?'('+why.join('、')+')':'');
 }
 // approved.json の中身を作る(1行1枚)
 function apvBuild(){
