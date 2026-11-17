@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117215103';
+const APP_VERSION='20261117222225';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -94,7 +94,11 @@ const T={
   noGiftSd:['途中でやめて「続きから」で遊ぶと、絵はイラストに変わります','とちゅうで やめて「つづきから」で あそぶと、えは イラストに かわります'],
   noGiftJg:['途中でやめると、続きは残りません','とちゅうで やめると、つづきは のこりません'],
   lpHint:['絵を長押しして「写真に追加」でも保存できます','えを ながおしして「しゃしんに ついか」でも ほぞん できます'],
-  lpOnly:['この写真は、絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります(ごほうびの絵には入りません)','この しゃしんは、えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります(ごほうびの えには はいりません)'],
+  lpOnly:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
+  remoteNote:['この写真は、アプリからは保存できません(完成画面で絵を長押しすると、写真アプリに保存できます)。遊ぶたびに通信で読み込みます','この しゃしんは、アプリからは ほぞん できません(かんせい がめんで えを ながおしすると、しゃしん アプリに ほぞん できます)。あそぶ たびに つうしんで よみこみます'],
+  picWait:['写真を読み込んでいます','しゃしんを よみこんでいます'],
+  picNg:['写真を読み込めませんでした。通信を確かめて、もう一度お試しください','しゃしんを よみこめませんでした。つうしんを たしかめて、もう いちど おためしください'],
+  apvRsSz:['大きさが違う','おおきさが ちがう'],
   admAskQ:['管理用の設定を開きますか?','かんりようの せっていを ひらきますか?'],
   admAskP:['ふだんは使いません。「開かない」を押してください','ふだんは つかいません。「ひらかない」を おしてください'],
   admAskNo:['開かない','ひらかない'],admAskYes:['開く','ひらく'],
@@ -193,7 +197,7 @@ const T={
   admSave:['保存する','ほぞんする'],admDel:['キーを消す','キーを けす'],
   admSaved:['保存しました','ほぞんしました'],
   admConnBtn:['🔌 接続を確かめる','🔌 せつぞくを たしかめる'],admConnIng:['確かめています…','たしかめて います…'],
-  admCKey:['キー','キー'],admCImg:['写真の持ち出し','しゃしんの もちだし'],admCNoKey:['キーが保存されていません','キーが ほぞん されて いません'],
+  admCKey:['キー','キー'],admCImg:['写真の表示','しゃしんの ひょうじ'],admCNoKey:['キーが保存されていません','キーが ほぞん されて いません'],
   admCBadKey:['キーが正しくないようです','キーが ただしく ない ようです'],admCNg:['つながりません','つながりません'],admCOk:['つながりました','つながりました'],admDeleted:['消しました','けしました'],
   admBad:['キーの形式が正しくありません','キーの けいしきが ただしく ありません'],
   admSrc:['前回の写真の取得元','ぜんかいの しゃしんの しゅとくもと'],
@@ -399,6 +403,18 @@ const catSrcOf=u=>TCA_IMG_RE.test(u)?'thecatapi':'cataas';
 const catSrcShort=u=>TCA_IMG_RE.test(u)?'Cat API':'cataas';
 const catSrcName=u=>TCA_IMG_RE.test(u)?'The Cat API':'cataas';
 const catOkUrl=u=>typeof u==='string'&&(TCA_IMG_RE.test(u)||CATAAS_IMG_RE.test(u));
+// The Cat API の写真は中身を読めない(持ち出し許可がない)ので、指紋の代わりに大きさ(幅×高さ)で照合する。iPad 内には保存せず、毎回取得元から読む
+const szOk=a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isInteger(n)&&n>=50&&n<=20000);
+function loadRemote(u,sz,ms){
+  const img=new Image();try{img.referrerPolicy='no-referrer';}catch(e){}
+  const ready=new Promise((res,rej)=>{
+    let done=false;const tm=setTimeout(()=>{if(!done){done=true;rej(new Error('timeout'));}},ms||30000);
+    img.onload=()=>{if(done)return;done=true;clearTimeout(tm);
+      if(sz&&(img.naturalWidth!==sz[0]||img.naturalHeight!==sz[1]))rej(new Error('size'));else res(img);};
+    img.onerror=()=>{if(done)return;done=true;clearTimeout(tm);rej(new Error('load'));};
+  });
+  ready.catch(()=>{});img.src=u;return {img,ready};
+}
 function fetchJson(url,opt,ms){
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),ms);
   return fetch(url,Object.assign({signal:ctl.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',mode:'cors'},opt||{}))
@@ -478,9 +494,11 @@ function apvParse(o){
   if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return null;
   const nos=new Set(),us=new Set(),list=[];
   for(const e of o.list.slice(0,APV_MAX)){
-    if(!e||typeof e!=='object'||!Number.isInteger(e.no)||e.no<1||e.no>99999||!catOkUrl(e.u)||typeof e.h!=='string'||!HASH_RE.test(e.h))continue;
+    if(!e||typeof e!=='object'||!Number.isInteger(e.no)||e.no<1||e.no>99999||!catOkUrl(e.u))continue;
+    const tca=TCA_IMG_RE.test(e.u);
+    if(tca?!szOk(e.sz):(typeof e.h!=='string'||!HASH_RE.test(e.h)))continue;
     if(nos.has(e.no)||us.has(e.u))continue;
-    nos.add(e.no);us.add(e.u);list.push({no:e.no,u:e.u,h:e.h});
+    nos.add(e.no);us.add(e.u);list.push(tca?{no:e.no,u:e.u,h:'',sz:[e.sz[0],e.sz[1]]}:{no:e.no,u:e.u,h:e.h});
   }
   const next=Number.isInteger(o.next)&&o.next>=1&&o.next<=100000?o.next:1;
   return {next:Math.max(next,...list.map(e=>e.no+1),1),list};
@@ -497,11 +515,11 @@ function apvOpenSave(a){try{localStorage.setItem(APV_OPEN_KEY,JSON.stringify({v:
 function apvNew(){try{const a=JSON.parse(localStorage.getItem(APV_NEW_KEY)||'[]');return new Set(Array.isArray(a)?a.filter(Number.isInteger):[]);}catch(e){return new Set();}}
 function apvNewSave(s){try{localStorage.setItem(APV_NEW_KEY,JSON.stringify([...s].slice(-60)));}catch(e){}}
 // 指紋が合わなかった写真(番号:指紋)。同じものは読み直さない
-function apvBad(){try{const a=JSON.parse(localStorage.getItem(APV_BAD_KEY)||'[]');return new Set(Array.isArray(a)?a.filter(x=>typeof x==='string'&&/^[0-9]{1,5}:[0-9a-f]{64}$/.test(x)):[]);}catch(e){return new Set();}}
+function apvBad(){try{const a=JSON.parse(localStorage.getItem(APV_BAD_KEY)||'[]');return new Set(Array.isArray(a)?a.filter(x=>typeof x==='string'&&/^[0-9]{1,5}:([0-9a-f]{64}|[0-9]{2,5}x[0-9]{2,5})$/.test(x)):[]);}catch(e){return new Set();}}
 function apvBadAdd(k){const s=apvBad();s.add(k);try{localStorage.setItem(APV_BAD_KEY,JSON.stringify([...s].slice(-200)));}catch(e){}}
 function apvSaveDb(){
   if(apvNoSave)return;
-  const list=apvPool.map(o=>({no:o.no,u:o.ou,h:o.h,blob:o.blob}));
+  const list=apvPool.filter(o=>o.blob instanceof Blob).map(o=>({no:o.no,u:o.ou,h:o.h,blob:o.blob}));
   jgQueue(()=>idbPut('apv',{v:1,list}));
 }
 async function apvLoadDb(){
@@ -510,6 +528,8 @@ async function apvLoadDb(){
   if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
   return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,APV_MAX);
 }
+const apvBadKey=e=>e.no+':'+(e.sz?e.sz[0]+'x'+e.sz[1]:e.h);
+function apvMakeRemote(e,img,ready){return {api:true,remote:true,src:'thecatapi',ou:e.u,blob:null,url:e.u,img,ready,no:e.no,h:'',sz:e.sz};}
 function apvMakeItem(e){
   const url=URL.createObjectURL(e.blob),{img,ready}=loadImg(url);
   return {api:true,src:catSrcOf(e.u),ou:e.u,blob:e.blob,url,img,ready,no:e.no,h:e.h};
@@ -530,7 +550,13 @@ function apvUnlock(n){
   apvOpenSave(op);apvNewSave(nw);apvRebuild();return rest.length;
 }
 // 見せる写真が6枚より少なければ6枚まで足す(最初・管理者が写真を外したとき)
-function apvTopUp(){if(catItems.length<APV_FIRST)apvUnlock(APV_FIRST-catItems.length);}
+function apvTopUp(){
+  // 一覧にある写真は、まだ読み込めていなくても(通信待ち・The Cat API が読めないときも)出したものとして数える
+  const ng=new Set(catNg()),bad=apvBad(),alive=new Set(apvPool.filter(o=>!ng.has(o.ou)).map(o=>o.no));
+  if(apvList)apvList.list.forEach(e=>{if(!ng.has(e.u)&&!bad.has(apvBadKey(e)))alive.add(e.no);});
+  const n=apvOpen().filter(x=>alive.has(x)).length;
+  if(n<APV_FIRST)apvUnlock(APV_FIRST-n);
+}
 // 数独をクリアしたら、遊んだ新しい猫(始めたときに決めた番号)を出す。出せたら番号を返す
 function apvUnlockNo(no){
   if(!no)return 0;
@@ -601,13 +627,26 @@ async function initCatsRun(gen){
   if(!lst)return;
   // まだ保存していない写真を読み込み、指紋が一致したものだけ保存する
   const have=new Set(apvPool.map(o=>o.no)),bad=apvBad(),ng=new Set(catNg());
-  apvStat.bad=lst.list.filter(e=>bad.has(e.no+':'+e.h)).length;
-  const todo=lst.list.filter(e=>!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
-  if(!todo.length)return;
-  dlSt={done:0,total:todo.length};dlPaint();
+  apvStat.bad=lst.list.filter(e=>bad.has(apvBadKey(e))).length;
+  const rem=lst.list.filter(e=>e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(apvBadKey(e)));
+  const todo=lst.list.filter(e=>!e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
+  if(!todo.length&&!rem.length)return;
+  dlSt={done:0,total:rem.length+todo.length};dlPaint();
+  // The Cat API の写真:取得元から読み、大きさが合えば使う(iPad 内には保存しない)
+  if(rem.length){
+    await Promise.all(rem.map(async e=>{
+      const {img,ready}=loadRemote(e.u,e.sz);
+      try{await ready;if(gen!==catGen)return;apvPool.push(apvMakeRemote(e,img,ready));}
+      catch(err){if(err&&err.message==='size'){apvBadAdd(apvBadKey(e));apvStat.bad++;}}
+      if(dlSt&&gen===catGen){dlSt.done++;dlPaint();}
+    }));
+    if(gen!==catGen)return;
+    apvStat.saved=apvPool.length;apvRebuild();apvTopUp();renderAllPics();renderSel();
+  }
+  const base=rem.length;
   for(const e of todo){
     if(gen!==catGen)return;
-    if(dlSt){dlSt.done=todo.indexOf(e);dlPaint();}
+    if(dlSt){dlSt.done=base+todo.indexOf(e);dlPaint();}
     try{
       const {buf,type}=await fetchBytes(e.u);
       if(await sha256(buf)!==e.h){apvBadAdd(e.no+':'+e.h);apvStat.bad++;continue;}
@@ -707,16 +746,16 @@ function renderSel(){
   $('#jgSelImg').classList.toggle('flip',selFlip);
   $('#picZoom').disabled=selApi>=0||selAlb>=0;
   // 写真そのものを保存できなかった猫の写真は、ごほうびの絵に入らない(遊ぶ前に知らせる)
-  const ng=!!(it&&it.api&&!it.wait&&!(it.blob instanceof Blob));
+  const ng=!!(it&&it.remote);
   $('#jgNoGift').style.display=ng?'':'none';$('#sdNoGift').style.display='none';
-  $('#jgNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftJg');
+  $('#jgNoGift').textContent=t('remoteNote');
   $('#sdNoGift').textContent=t('noGift')+(kana?' ':'')+t('noGiftSd');
 }
 /* ====== iPad本体(写真アプリ)への保存 ====== */
 // 正方形のJPEGにして、共有の画面(「画像を保存」で写真アプリへ)を開く。共有できない端末ではダウンロード。
 // 共有はボタンを押した直後でないと開けないので、ファイルは画面を開いたときに先に作っておく
 async function picFile(item){
-  if(!item)return null;
+  if(!item||item.remote)return null; // The Cat API の写真は作れない(長押しでの保存を案内する)
   let blob=item.blob instanceof Blob&&item.blob.type==='image/jpeg'?item.blob:null;
   if(!blob){
     let img;try{img=await item.ready;}catch(e){return null;}
@@ -755,7 +794,7 @@ function donePrep(item,sel){
     if(f){b.disabled=false;const u=URL.createObjectURL(f);doneUrls[sel]=u;im.src=u;}
     else{
       b.style.display='none';g.style.display='none';
-      if(item&&item.api){lp.dataset.k='lpOnly';lp.textContent=t('lpOnly');lp.classList.add('only');}
+      if(item&&(item.api||item.remote)){lp.dataset.k='lpOnly';lp.textContent=t('lpOnly');lp.classList.add('only');}
     }
   });
 }
@@ -1110,10 +1149,16 @@ function makePieces(rots){
       e:{t:r===0?0:-H(r,c), b:r===N-1?0:H(r+1,c), l:c===0?0:-V(r,c), r:c===N-1?0:V(r,c+1)}});
   }
 }
+// 通信で読む写真(The Cat API)は、読み込みに0.3秒以上かかったら「写真を読み込んでいます」と棒を出す
+async function waitPic(item){
+  if(!item||!item.remote)return item.ready;
+  const ov=$('#picWaitOv'),tm=setTimeout(()=>ov.classList.add('on'),300);
+  try{return await item.ready;}finally{clearTimeout(tm);ov.classList.remove('on');}
+}
 let jgItem=null; // 遊んでいる絵
 async function newGame(it){
   const item=it||curItem();jgItem=item;
-  try{curImg=await item.ready;}catch(e){goStart();return;}
+  try{curImg=await waitPic(item);}catch(e){if(item.remote)toast('picNg',3500);goStart();return;}
   N=selN;ROT=selRot;FLIP=selFlip;resetPlay();
   const rnd=()=>Math.random()<.5?1:-1;
   jgH=Array.from({length:N*N},rnd);jgV=Array.from({length:N*N},rnd);
@@ -1386,6 +1431,8 @@ function jgImgRec(item,img){
   const idx=images.indexOf(item);
   if(item.nm&&idx>=0&&idx<SAMPLE_N)return Promise.resolve({kind:'sample',idx});
   const meta=catMetaOk(item)?{src:item.src,ou:item.ou}:null;
+  // The Cat API の写真は、写真の代わりにアドレスと大きさを残し、続きから遊ぶときに読み直す
+  if(item.remote)return Promise.resolve(TCA_IMG_RE.test(item.ou)&&szOk(item.sz)?{kind:'url',u:item.ou,sz:item.sz.slice(),cat:meta||undefined}:null);
   return imgBlobRec(img).then(r=>{if(r&&meta)r.cat=meta;return r;});
 }
 function imgBlobRec(img){
@@ -1429,12 +1476,14 @@ function jgValid(s,im){
 function imRecOk(im){
   if(!im||typeof im!=='object')return false;
   if(im.kind==='sample')return Number.isInteger(im.idx)&&im.idx>=0&&im.idx<SAMPLE_N;
+  if(im.kind==='url')return TCA_IMG_RE.test(im.u)&&szOk(im.sz)&&(im.cat===undefined||catMetaOk(im.cat));
   if(im.kind==='blob')return im.blob instanceof Blob&&/^image\/(jpeg|png|webp)$/.test(im.blob.type)&&im.blob.size<20e6&&(im.cat===undefined||catMetaOk(im.cat));
   return false;
 }
 // 保存した絵の記録から、遊ぶ絵を作る
 function itemFromRec(im){
   if(im.kind==='sample')return images[im.idx];
+  if(im.kind==='url'){const r=loadRemote(im.u,im.sz);return {no:0,remote:true,src:'thecatapi',ou:im.u,blob:null,url:im.u,img:r.img,ready:r.ready,sz:im.sz};}
   const url=URL.createObjectURL(im.blob),it=Object.assign({no:0,url,blob:im.blob},loadImg(url));
   if(im.cat){it.src=im.cat.src;it.ou=im.cat.ou;}
   return it;
@@ -1451,7 +1500,7 @@ async function renderJgCont(){
   if(jgThumbUrl){URL.revokeObjectURL(jgThumbUrl);jgThumbUrl=null;}
   if(!d){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
   let src;
-  if(d.im.kind==='sample')src=images[d.im.idx].url;else{jgThumbUrl=URL.createObjectURL(d.im.blob);src=jgThumbUrl;}
+  if(d.im.kind==='sample')src=images[d.im.idx].url;else if(d.im.kind==='url')src=d.im.u;else{jgThumbUrl=URL.createObjectURL(d.im.blob);src=jgThumbUrl;}
   const im=mk('img');im.alt='';im.src=safeImgUrl(src);if(d.s.flip)im.className='flip';
   const left=d.s.pc.filter(p=>p.w!==2).length,tx=mk('span','ctx');
   tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🧩 '+t('gJig')+' ・ '+t('left1')+' '+left+' '+t('left2')+' ・ ⏱ '+fmt(Math.floor(d.s.el))));
@@ -1459,7 +1508,9 @@ async function renderJgCont(){
 }
 async function jgRestore(d){
   const {s,im}=d,item=itemFromRec(im);jgItem=item;
-  try{curImg=await item.ready;}catch(e){jgClear();jgContData=null;goStart();return;}
+  try{curImg=await waitPic(item);}catch(e){
+    if(item.remote){toast('picNg',3500);playing=false;show('menu');return;} // 通信で読めないときは続きを消さない
+    jgClear();jgContData=null;goStart();return;}
   N=s.N;ROT=s.rot;FLIP=!!s.flip;selN=N;selRot=ROT;selFlip=FLIP;renderCounts();renderRots();renderFlips();
   jgH=s.h.slice();jgV=s.vv.slice();jgId=s.id;
   resetPlay();
@@ -1949,7 +2000,7 @@ async function renderSdCont(){
   if(sv&&sv.img){im=await jgQueue(()=>idbGet('sudoku-img'));if(gen!==sdContGen)return;}
   if(sdThumbUrl){URL.revokeObjectURL(sdThumbUrl);sdThumbUrl=null;}
   if(!sv){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
-  if(im&&im!==IDB_ERR&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
+  if(im&&im!==IDB_ERR&&im.id===sv.img&&imRecOk(im)){if(im.kind==='sample')src=images[im.idx].url;else if(im.kind==='url')src=im.u;else{sdThumbUrl=URL.createObjectURL(im.blob);src=sdThumbUrl;}}
   let pic;if(sv.nw)pic=mk('span','qm','?');else{pic=mk('img');pic.alt='';pic.src=safeImgUrl(src);}
   const tx=mk('span','ctx');tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🔢 '+t('gSd')+' ・ '+t('s'+sv.lv)+' ・ ⏱ '+fmt(Math.floor(sv.el))));
   cb.replaceChildren(pic,tx);cb.style.display='';renderMenuNew();
@@ -2080,8 +2131,8 @@ async function admConn(){
       try{const a=await fetchJson('https://api.thecatapi.com/v1/images/search?limit=1&mime_types=jpg,png',{headers:{'x-api-key':k}},10000);
         const u=Array.isArray(a)&&a[0]&&typeof a[0].url==='string'&&TCA_IMG_RE.test(a[0].url)?a[0].url:'';
         if(!u)throw new Error('form');
-        await fetchBytes(u,20000);L.push('✓ The Cat API '+t('admCImg')+':'+t('admCOk'));}
-      catch(e){const w=apvErrWhy(e,false);L.push('✗ The Cat API '+t('admCImg')+':'+(e&&e.message==='form'?t('apvRsType'):t(w)));}
+        await loadRemote(u,null,20000).ready;L.push('✓ The Cat API '+t('admCImg')+':'+t('admCOk'));}
+      catch(e){L.push('✗ The Cat API '+t('admCImg')+':'+(e&&e.message==='form'?t('apvRsType'):t('apvRsLoad')));}
     }
   }
   try{const o=await fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36),null,15000);
@@ -2118,7 +2169,7 @@ let apvAdmList=null,apvCands=[],apvFinding=false;
 function admDraft(){
   try{const o=JSON.parse(localStorage.getItem(ADM_DRAFT_KEY)||'null');
     if(!o||o.v!==1)return {add:[],rm:[]};
-    const add=Array.isArray(o.add)?o.add.filter(e=>e&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)).slice(0,APV_ADM_MAX):[];
+    const add=Array.isArray(o.add)?o.add.filter(e=>e&&catOkUrl(e.u)&&(TCA_IMG_RE.test(e.u)?szOk(e.sz):typeof e.h==='string'&&HASH_RE.test(e.h))).map(e=>TCA_IMG_RE.test(e.u)?{u:e.u,sz:e.sz}:{u:e.u,h:e.h}).slice(0,APV_ADM_MAX):[];
     const rm=Array.isArray(o.rm)?o.rm.filter(n=>Number.isInteger(n)&&n>0&&n<=99999):[];
     return {add,rm};
   }catch(e){return {add:[],rm:[]};}
@@ -2161,8 +2212,8 @@ function apvRender(){
   });
   // 前に許可した候補(下書きにあり、今回の候補にないもの)+今回見つけた候補(見つけた順。許可しても並びは変えない)
   const found=new Set(apvCands.map(c=>c.u)),ok=new Set(d.add.map(e=>e.u));
-  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,on:true}),e.u)));
-  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,on}),c.u));});
+  d.add.filter(e=>!found.has(e.u)).forEach(e=>cand.appendChild(apvTile(e.u,'',true,t('apvOk'),add({kind:'cand',u:e.u,src:e.u,h:e.h,sz:e.sz,on:true}),e.u)));
+  apvCands.forEach(c=>{const on=ok.has(c.u);cand.appendChild(apvTile(c.url,'',on,t('apvOk'),add({kind:'cand',u:c.u,src:c.url,h:c.h,sz:c.sz,on}),c.u));});
   apvOrdRender(d);
   if(apvZi>=0){const i=apvZ.findIndex(z=>z.kind+'|'+z.u===zk);if(i>=0){apvZi=i;apvZPaint();}else apvZClose();}
   const tot=apvTotal(d),over=tot-APV_ADM_MAX;
@@ -2214,7 +2265,7 @@ function apvZToggle(){
   const z=apvZ[apvZi];if(!z)return;const x=admDraft();
   if(z.kind==='cur')x.rm=x.rm.includes(z.no)?x.rm.filter(n=>n!==z.no):x.rm.concat(z.no);
   else if(x.add.some(y=>y.u===z.u))x.add=x.add.filter(y=>y.u!==z.u);
-  else{x.add.push({u:z.u,h:z.h});apvAutoRm(x);}
+  else{x.add.push(z.sz?{u:z.u,sz:z.sz}:{u:z.u,h:z.h});apvAutoRm(x);}
   admDraftSave(x);apvRender();
 }
 function apvZGo(d){const i=apvZi+d;if(i>=0&&i<apvZ.length){apvZi=i;apvZPaint();}}
@@ -2258,13 +2309,15 @@ async function apvFind(){
   let urls=[];
   const k=catKey(),nc=k?6:12;
   // 出所ごとの結果(終わったあとに出す。どちらの出所から写真が取れなかったか、理由を確かめる用)
+  const tcaSz=new Map(); // The Cat API が返した大きさ(実際の大きさと比べる)
   const S={thecatapi:{q:k?'':'nokey',e:'',got:0,dup:0,ok:0,ng:{}},cataas:{q:'',e:'',got:0,dup:0,ok:0,ng:{}}};
   const P=apvFP={ph:1,done:0,total:nc+(k?1:0),ok:0,t0:Date.now()};
   const tick=pr=>pr.finally(()=>{P.done++;apvFPaint();});
   apvFPaint();clearInterval(apvFTm);apvFTm=setInterval(apvFPaint,1000);
   const tca=k?tick(fetchJson('https://api.thecatapi.com/v1/images/search?limit=10&mime_types=jpg,png',{headers:{'x-api-key':k}},10000)).then(a=>{
     S.thecatapi.q='ok';
-    if(Array.isArray(a))urls=urls.concat(a.map(o=>o&&typeof o.url==='string'&&TCA_IMG_RE.test(o.url)?o.url:'').filter(Boolean));}).catch(e=>{S.thecatapi.q='err';S.thecatapi.e=apvErrWhy(e,true);}):Promise.resolve();
+    if(Array.isArray(a))a.forEach(o=>{if(!o||typeof o.url!=='string'||!TCA_IMG_RE.test(o.url))return;urls.push(o.url);
+      if(Number.isInteger(o.width)&&Number.isInteger(o.height))tcaSz.set(o.url,[o.width,o.height]);});}).catch(e=>{S.thecatapi.q='err';S.thecatapi.e=apvErrWhy(e,true);}):Promise.resolve();
   const rs=await Promise.allSettled(Array.from({length:nc},(_,i)=>tick(fetchJson('https://cataas.com/cat?json=true&_='+Date.now().toString(36)+i,null,10000))));
   await tca;
   S.cataas.q=rs.some(r=>r.status==='fulfilled')?'ok':'err';
@@ -2279,13 +2332,20 @@ async function apvFind(){
     while(i<urls.length){
       const u=urls[i++];
       try{
+        if(TCA_IMG_RE.test(u)){
+          // The Cat API:中身は読めないので表示できるかと大きさだけを確かめる
+          const img=await loadRemote(u,null,20000).ready,sz=[img.naturalWidth,img.naturalHeight],api=tcaSz.get(u);
+          if(!szOk(sz)||Math.min(sz[0],sz[1])<200)throw new Error('small');
+          if(api&&(api[0]!==sz[0]||api[1]!==sz[1]))throw new Error('size');
+          apvCands.push({u,h:'',sz,url:u});ok++;S.thecatapi.ok++;P.ok=ok;apvRender();P.done++;apvFPaint();continue;
+        }
         const a=await fetchBytes(u),b=await fetchBytes(u,20000,'reload');
         const h=await sha256(a.buf);
         if(h!==await sha256(b.buf))throw new Error('changed');
         const url=URL.createObjectURL(new Blob([a.buf],{type:a.type}));
         try{await loadCatImg(url);}catch(e){URL.revokeObjectURL(url);throw e;}
         apvCands.push({u,h,url});ok++;S[catSrcOf(u)].ok++;P.ok=ok;apvRender();
-      }catch(e){ng++;const x=S[catSrcOf(u)].ng,w=apvErrWhy(e,false);x[w]=(x[w]||0)+1;}
+      }catch(e){ng++;const x=S[catSrcOf(u)].ng,w=TCA_IMG_RE.test(u)&&e&&e.message==='size'?'apvRsSz':apvErrWhy(e,false);x[w]=(x[w]||0)+1;}
       P.done++;apvFPaint();
     }
   };
@@ -2294,7 +2354,7 @@ async function apvFind(){
   const sec=Math.floor((Date.now()-P.t0)/1000);
   apvFinding=false;
   const msg=$('#apvFindMsg');msg.classList.remove('apvFindOn');msg.style.whiteSpace='';$('#apvBar').hidden=true;
-  msg.textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+'(⏱ '+apvFTime(sec)+')'+(ng?(kana?'(もちだせない・なかみが かわる しゃしん '+ng+'まいは のぞきました)':'(持ち出せない・中身が変わる写真'+ng+'枚は除きました)'):'')
+  msg.textContent=(kana?ok+'まい みつかりました':ok+'枚見つかりました')+'(⏱ '+apvFTime(sec)+')'+(ng?(kana?'(つかえない しゃしん '+ng+'まいは のぞきました)':'(使えない写真'+ng+'枚は除きました)'):'')
     +'\n'+apvSrcLine('The Cat API',S.thecatapi)+'\n'+apvSrcLine('cataas',S.cataas);
   msg.style.whiteSpace='pre-line';
   apvRender();
@@ -2325,8 +2385,8 @@ function apvSrcLine(name,x){
 function apvBuild(){
   const d=admDraftClean();if(!apvAdmList)return '';
   let next=apvAdmList.next;
-  const list=apvAdmList.list.filter(e=>!d.rm.includes(e.no)).concat(d.add.map(e=>({no:next++,u:e.u,h:e.h}))).sort((a,b)=>a.no-b.no);
-  return '{"v":1,"next":'+next+',"list":[\n'+list.map(e=>JSON.stringify({no:e.no,u:e.u,h:e.h})).join(',\n')+'\n]}\n';
+  const list=apvAdmList.list.filter(e=>!d.rm.includes(e.no)).concat(d.add.map(e=>e.sz?{no:next++,u:e.u,sz:e.sz}:{no:next++,u:e.u,h:e.h})).sort((a,b)=>a.no-b.no);
+  return '{"v":1,"next":'+next+',"list":[\n'+list.map(e=>JSON.stringify(e.sz?{no:e.no,u:e.u,sz:e.sz}:{no:e.no,u:e.u,h:e.h})).join(',\n')+'\n]}\n';
 }
 $('#admApv').onclick=apvAdmOpen;
 $('#apvFind').onclick=apvFind;

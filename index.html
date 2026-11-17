@@ -134,8 +134,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .dlMsg{font-size:24px;font-weight:bold;margin:0 0 10px;color:var(--ink)}
 .dlSub{font-size:20px;margin:10px 0 0;color:var(--sub)}
 .dlBar{height:22px;border-radius:11px;background:#fff;border:2px solid #E8C24A;overflow:hidden}
-#dlBarIn{height:100%;width:0;background:var(--pri);border-radius:9px;transition:width .4s}
-.dlBar.ind #dlBarIn{width:30%;animation:dlInd 1.6s ease-in-out infinite}
+.dlBar>div{height:100%;width:0;background:var(--pri);border-radius:9px;transition:width .4s}
+.dlBar.ind>div{width:30%;animation:dlInd 1.6s ease-in-out infinite}
+#picWaitOv{z-index:10002}
+.dlg.picWait{max-width:560px;width:90vw}
 @keyframes dlInd{0%{margin-left:-30%}100%{margin-left:100%}}
 .kana .dlMsg,.kana .dlSub{word-break:keep-all;overflow-wrap:anywhere}
 .adm .admApv{width:100%;margin:6px 0 10px}
@@ -609,6 +611,13 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <p class="sguide" id="sdSaveG" data-t="saveGuide">押したあとの画面で「画像を保存」を選ぶと、写真アプリに入ります</p>
 </div></div>
 
+<!-- 通信で読む写真(The Cat API)の読み込み中 -->
+<div class="ov" id="picWaitOv"><div class="dlg picWait">
+  <p class="dlMsg" data-t="picWait">写真を読み込んでいます</p>
+  <div class="dlBar ind"><div></div></div>
+  <p class="dlSub" data-t="dlWait">しばらくお待ちください(数分かかることがあります)</p>
+</div></div>
+
 <!-- 管理用の設定(メニューの版番号を3秒長押しで開く。ご家族は使わない) -->
 <div class="ov" id="admOv"><div class="dlg adm">
   <h3 data-t="admH">管理用の設定</h3>
@@ -664,6 +673,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261117215103"></script>
+<script src="app.js?v=20261117222225"></script>
 </body>
 </html>
