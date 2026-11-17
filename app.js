@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261117235232';
+const APP_VERSION='20261118012215';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -224,6 +224,8 @@ const T={
   giftJg:['クリアすると🎁が付き、この猫をiPadに保存できるようになります','クリアすると 🎁が つき、この ねこを iPadに ほぞん できるように なります'],
   giftJgR:['クリアすると🎁が付きます','クリアすると 🎁が つきます'],
   giftZoomR:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
+  keepFavOff:['この猫は、★をやめると一覧から消えます(もう出てきません)。やめるときは、もう一度押してください','この ねこは、★を やめると いちらんから きえます(もう でてきません)。やめる ときは、もう いちど おしてください'],
+  keepFavOff2:['もう一度押すと★をやめます','もう いちど おすと ★を やめます'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
   admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
@@ -358,7 +360,7 @@ const images=[
   {nm:['窓辺','まどべ'],url:svgUrl(SVG_WINDOW)},
 ].map(o=>Object.assign(o,loadImg(o.url)));
 const SAMPLE_N=images.length; // 数独の完成画面に出す絵(サンプルの猫イラスト)
-const picName=o=>o.nm?o.nm[kana]:t('photoN')+' '+apvSeqLabel(o.no);
+const picName=o=>o.nm?o.nm[kana]:o.kept?t('photoN'):t('photoN')+' '+apvSeqLabel(o.no);
 const COUNTS=[2,3,4,5,6,7,8];
 // 絵の選択:selApi=猫の写真(API)の番号、selAlb=ごほうびの絵の番号(どちらも -1 ならイラスト・iPadの写真の selPic)
 let selPic=0, selN=3, photoNo=0, selApi=-1, selAlb=-1;
@@ -525,6 +527,20 @@ function catFavToggle(u){
   if(a.length>=CAT_FAV_MAX)return 'full';
   a.push(u);urlListSave(CAT_FAV_KEY,a);return 'on';
 }
+// 段階4:許可リストから外した写真でも、出した猫のうち🎁か★の猫は iPad に残す(消した写真は除く)
+// 大きさで照合する写真は iPad 内に保存しないので、アドレスと大きさを覚えておく(neko-apv-rmeta)
+const APV_RMETA_KEY='neko-apv-rmeta';
+let apvKeepNos=new Set();
+function apvRmeta(){try{const a=JSON.parse(localStorage.getItem(APV_RMETA_KEY)||'[]');return Array.isArray(a)?a.filter(e=>e&&Number.isInteger(e.no)&&e.no>0&&e.no<=99999&&catOkUrl(e.u)&&szOk(e.sz)).slice(-500):[];}catch(e){return [];}}
+function apvRmetaSave(a){try{localStorage.setItem(APV_RMETA_KEY,JSON.stringify(a.slice(-500).map(e=>({no:e.no,u:e.u,sz:[e.sz[0],e.sz[1]]}))));}catch(e){}}
+function apvKeepOk(no,u){if(!apvOpen().includes(no)||catNg().includes(u))return false;return catGift().includes(u)||catFav().includes(u);}
+// 残していた猫が🎁も★もなくなったら、すぐに一覧から外す
+function apvKeepPrune(){
+  const before=apvPool.length,cur=selApi>=0?catItems[selApi]:null;
+  apvPool=apvPool.filter(o=>{if(!o.kept||apvKeepOk(o.no,o.ou))return true;if(o.url.startsWith('blob:'))URL.revokeObjectURL(o.url);return false;});
+  apvKeepNos=new Set([...apvKeepNos].filter(n=>apvPool.some(o=>o.no===n&&o.kept)||apvRmeta().some(e=>e.no===n&&apvKeepOk(e.no,e.u))));
+  if(apvPool.length!==before){if(cur&&!apvPool.includes(cur))selApi=-1;apvSaveDb();apvRebuild();}
+}
 function catMarkDrop(u){urlListSave(CAT_GIFT_KEY,catGift().filter(x=>x!==u));urlListSave(CAT_FAV_KEY,catFav().filter(x=>x!==u));}
 function catNg(){try{const a=JSON.parse(localStorage.getItem(CAT_NG_KEY)||'[]');return Array.isArray(a)?a.filter(catOkUrl).slice(-CAT_NG_MAX):[];}catch(e){return [];}}
 function catNgAdd(u){if(!catOkUrl(u))return;const a=catNg().filter(x=>x!==u);a.push(u);try{localStorage.setItem(CAT_NG_KEY,JSON.stringify(a.slice(-CAT_NG_MAX)));}catch(e){}}
@@ -578,7 +594,7 @@ async function apvLoadDb(){
   const o=await jgQueue(()=>idbGet('apv'));
   if(o===IDB_ERR)throw new Error('idb');
   if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
-  return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,APV_MAX);
+  return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,400); // 残した猫(段階4)のぶん多めに
 }
 // 表示用の連番:許可リストの並び順(1から)。no はアプリが写真を見分ける番号(変えない)。出る順番も並び順
 // 一覧が読めないとき(通信なし)のため、最後に読んだ並び(no の配列)を覚えておく
@@ -617,8 +633,16 @@ function apvTopUp(){
   // 一覧にある写真は、まだ読み込めていなくても(通信待ち・The Cat API が読めないときも)出したものとして数える
   const ng=new Set(catNg()),bad=apvBad(),alive=new Set(apvPool.filter(o=>!ng.has(o.ou)).map(o=>o.no));
   if(apvList)apvList.list.forEach(e=>{if(!ng.has(e.u)&&!bad.has(apvBadKey(e)))alive.add(e.no);});
-  const n=apvOpen().filter(x=>alive.has(x)).length;
-  if(n<APV_FIRST)apvUnlock(APV_FIRST-n);
+  apvKeepNos.forEach(n=>alive.add(n));
+  const op=apvOpen(),n=op.filter(x=>alive.has(x)).length;
+  if(n>=APV_FIRST)return;
+  // 一覧が読めているときは、一覧の並び順で出す(読み込みの早い写真から先に出さない)
+  if(apvList){
+    const os=new Set(op),add=apvList.list.filter(e=>!os.has(e.no)&&!ng.has(e.u)&&!bad.has(apvBadKey(e))).slice(0,APV_FIRST-n);
+    if(!add.length)return;
+    const nw=apvNew();add.forEach(e=>{op.push(e.no);nw.add(e.no);});apvOpenSave(op);apvNewSave(nw);apvRebuild();return;
+  }
+  apvUnlock(APV_FIRST-n);
 }
 // 数独をクリアしたら、遊んだ新しい猫(始めたときに決めた番号)を出す。出せたら番号を返す
 function apvUnlockNo(no){
@@ -679,10 +703,19 @@ async function initCatsRun(gen){
   let lst=null;
   try{lst=await apvFetchList();apvList=lst;apvSeqSet(lst.list);apvStat.err='';}catch(e){apvStat.err=String(e&&e.message||e).slice(0,40);}
   if(gen!==catGen)return;
-  // 一覧が読めたら、一覧から外された写真は消す(読めないときは保存した写真で遊ぶ)
-  const keep=lst?saved.filter(e=>lst.list.some(x=>x.no===e.no&&x.u===e.u&&x.h===e.h)):saved;
+  // 一覧が読めたら、一覧から外された写真は消す(読めないときは保存した写真で遊ぶ)。ただし🎁・★の猫は残す(段階4)
+  const inL=no=>lst?lst.list.some(x=>x.no===no):apvSeq(no)>0;
+  const keep=lst?saved.filter(e=>lst.list.some(x=>x.no===e.no&&x.u===e.u&&x.h===e.h)||(!inL(e.no)&&apvKeepOk(e.no,e.u))):saved;
   apvPool.forEach(o=>{if(o.url.startsWith('blob:'))URL.revokeObjectURL(o.url);});
-  apvPool=keep.map(apvMakeItem);
+  apvPool=keep.map(e=>{const it=apvMakeItem(e);if(!inL(e.no))it.kept=true;return it;});
+  // 大きさで照合する写真のアドレスと大きさを覚える(一覧にある写真+残す猫)
+  let kRem=[];
+  if(lst){
+    const lr=lst.list.filter(e=>e.sz),ln=new Set(lst.list.map(e=>e.no));
+    kRem=apvRmeta().filter(e=>!ln.has(e.no)&&apvKeepOk(e.no,e.u));
+    apvRmetaSave(lr.concat(kRem));
+  }
+  apvKeepNos=new Set(apvPool.filter(o=>o.kept).map(o=>o.no).concat(kRem.map(e=>e.no)));
   if(lst&&keep.length!==saved.length)apvSaveDb();
   apvRebuild();apvTopUp();
   catState='ok';apvStat.list=lst?lst.list.length:apvStat.list;apvStat.saved=apvPool.length;
@@ -691,7 +724,7 @@ async function initCatsRun(gen){
   // まだ保存していない写真を読み込み、指紋が一致したものだけ保存する
   const have=new Set(apvPool.map(o=>o.no)),bad=apvBad(),ng=new Set(catNg());
   apvStat.bad=lst.list.filter(e=>bad.has(apvBadKey(e))).length;
-  const rem=lst.list.filter(e=>e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(apvBadKey(e)));
+  const rem=lst.list.concat(kRem).filter(e=>e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(apvBadKey(e)));
   const todo=lst.list.filter(e=>!e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
   if(!todo.length&&!rem.length)return;
   dlSt={done:0,total:rem.length+todo.length};dlPaint();
@@ -699,7 +732,7 @@ async function initCatsRun(gen){
   if(rem.length){
     await Promise.all(rem.map(async e=>{
       const {img,ready}=loadRemote(e.u,e.sz);
-      try{await ready;if(gen!==catGen)return;apvPool.push(apvMakeRemote(e,img,ready));}
+      try{await ready;if(gen!==catGen)return;const it=apvMakeRemote(e,img,ready);if(kRem.includes(e))it.kept=true;apvPool.push(it);}
       catch(err){if(err&&err.message==='size'){apvBadAdd(apvBadKey(e),img.naturalWidth+'x'+img.naturalHeight);apvStat.bad++;}}
       if(dlSt&&gen===catGen){dlSt.done++;dlPaint();}
     }));
@@ -751,7 +784,7 @@ function catDelDo(){
     toast('catDelDone',2000);renderAllPics();return;
   }
   // 猫の写真から消すのは不適切な画像のため:出さない一覧に入れ、ごほうびの絵からも消す
-  catNgAdd(ou);catMarkDrop(ou);selApi=-1;apvRebuild();
+  catNgAdd(ou);catMarkDrop(ou);selApi=-1;apvKeepPrune();apvRebuild();
   const before=albItems.length;
   albItems=albItems.filter(x=>{if(x.ou!==ou)return true;URL.revokeObjectURL(x.url);return false;});
   if(albItems.length!==before){selAlb=-1;albSave();}
@@ -765,11 +798,17 @@ $('#catDel').onclick=()=>{ensureAudio();catDelAsk();};
 $('#albDel').onclick=()=>{ensureAudio();albDelAsk();};
 $('#catFold').onclick=()=>{apvFold=!apvFold;renderCatPics();};
 $('#catZoom').onclick=()=>{ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(o)zoomOpen(o);};
+let favOffAt=0,favOffU='';
 $('#catFav').onclick=()=>{
   ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(!o)return;
+  if(o.kept&&!hasGift(o)&&catFav().includes(o.ou)){
+    if(Date.now()-favOffAt>4000||favOffU!==o.ou){favOffAt=Date.now();favOffU=o.ou;toast('keepFavOff',4000);$('#catFav').firstChild.textContent=t('keepFavOff2');return;}
+    favOffAt=0;
+  }
   const r=catFavToggle(o.ou);if(r==='full'){toast('favFull',3200);return;}
   if(r==='on')tone(1175,0,.18,.1);
-  renderCatPics();
+  if(r==='off')apvKeepPrune();
+  renderAllPics();renderSel();
 };
 function renderCatPics(){
   const box=$('#catPics'),msg=$('#catMsg'),del=$('#catDel'),q=$('#catQuota'),fb=$('#catFold');box.replaceChildren();
@@ -792,7 +831,7 @@ function renderCatPics(){
   catItems.slice(0,lim).forEach((o,k)=>{
     const d=document.createElement('button');d.className='pic'+(selApi===k?' sel':'');
     const im=mk('img');im.alt='';im.src=safeImgUrl(o.url);
-    const q=mk('div','qt'),pw=mk('div','pim');pw.append(im,mk('span','pno',apvSeqLabel(o.no)));
+    const q=mk('div','qt'),pw=mk('div','pim');pw.append(im);if(!o.kept)pw.appendChild(mk('span','pno',apvSeqLabel(o.no))); // 残した猫(一覧から外した写真)は番号がない
     if(nw.has(o.no))pw.appendChild(mk('span','pnew','NEW'));
     const mg=gf.has(o.ou),mf=fv.has(o.ou);
     if(mg||mf){const m=mk('span','pmk');if(mg)m.appendChild(mk('span','pg','🎁'));if(mf)m.appendChild(mk('span','pf','★'));pw.appendChild(m);}
@@ -2205,7 +2244,7 @@ $('#admInit').onclick=()=>{
   if(Date.now()-admInitAt>4000){admInitAt=Date.now();$('#admInit').textContent=t('admInit2');return;}
   admInitAt=0;
   try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,CAT_NG_KEY,CAT_GIFT_KEY,CAT_FAV_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
-  selApi=-1;apvRebuild();apvTopUp();renderAllPics();renderSel();admRender('admInitDone');
+  selApi=-1;apvKeepPrune();apvRebuild();apvTopUp();renderAllPics();renderSel();admRender('admInitDone');
 };
 $('#admSave').onclick=()=>{
   const v=String($('#admKey').value||'').trim();
