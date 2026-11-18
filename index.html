@@ -311,7 +311,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 #mihonCv{border-radius:14px;border:6px solid #fff;display:block;margin:0 auto 18px;background:#fff}
 .big{font-size:70px;line-height:1.1}
 
-/* ====== 数独 ====== */
+/* ====== ナンプレ ====== */
 .cont{width:100%;max-width:980px;min-height:116px;margin-top:22px;border-radius:24px;border:4px solid var(--pri);background:#FFF0E4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 5px 0 var(--pri-d)}
 .cont:active{transform:translateY(4px);box-shadow:0 1px 0 var(--pri-d)}
 .cont .ct{font-size:36px;font-weight:bold;color:var(--pri-d)}
@@ -377,7 +377,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 .qpR{display:flex;gap:8px;margin-top:8px}
 .qpR .tb{flex:1;min-height:62px;font-size:22px;padding:0 8px}
 .sc.hold{transition:background .45s;background:#FFE36A}
-/* 数独:記録のある問題 */
+/* ナンプレ:記録のある問題 */
 .recs{width:100%;max-width:980px;display:flex;flex-direction:column;gap:12px}
 .recs h3{font-size:22px;color:var(--sub);margin:10px 0 0}
 .rec{display:flex;gap:12px;align-items:stretch}
@@ -412,12 +412,12 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="upd" id="updBar" role="status" hidden></div>
   <div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div><div class="ver" id="menuVer"></div></div>
   <h1>🐱 ねこの脳トレパズル</h1>
-  <p class="lead" data-t="menuLead">数独を解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます</p>
+  <p class="lead" data-t="menuLead">ナンプレを解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます</p>
   <div class="dlBox" id="dlBox" hidden><p class="dlMsg" id="dlMsg"></p><div class="dlBar"><div id="dlBarIn"></div></div><p class="dlSub" id="dlSub"></p></div>
   <button class="cont jg" id="jgCont" style="display:none"></button>
   <button class="cont jg" id="sdCont" style="display:none"></button>
   <h2 class="new" id="menuHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
-  <button class="cont jg sdc" id="sdCard"><span class="qm">?</span><span class="ctx"><span class="ct" data-t="sdCardT">🔢 数独で新しい猫を出す</span><small id="sdCardS"></small></span></button>
+  <button class="cont jg sdc" id="sdCard"><span class="qm">?</span><span class="ctx"><span class="ct" data-t="sdCardT">🔢 ナンプレで新しい猫を出す</span><small id="sdCardS"></small></span></button>
   <h2 data-t="hPic">🧩 ジグソーパズルの絵を選ぶ</h2>
   <h3 class="subh" data-t="hCat">出た猫</h3>
   <p class="catMsg" id="catMsg"></p>
@@ -487,7 +487,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 
 <section id="sdStart" class="screen">
   <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
-  <h1>🔢 <span data-t="gSd">数独</span></h1>
+  <h1>🔢 <span data-t="gSd">ナンプレ</span></h1>
   <div class="usePic"><span class="qm">?</span><span id="sdPicMsg"></span></div>
   <p class="noGift" id="sdNoGift" style="display:none"></p>
   <h2 data-t="sdHLv">難しさ</h2>
@@ -701,6 +701,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261118020723"></script>
+<script src="app.js?v=20261118151026"></script>
 </body>
 </html>

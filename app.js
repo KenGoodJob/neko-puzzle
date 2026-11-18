@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118020723';
+const APP_VERSION='20261118151026';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -10,8 +10,8 @@ document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
 // [漢字, ひらがな] の組。画面への反映は必ず textContent で行う
 const T={
   lang:['文字','もじ'],
-  menuLead:['数独を解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます','すうどくを とくと、あたらしい ねこが でてきます。ジグソーパズルは、でた ねこや イラストを えらんで あそべます'],
-  sdCardT:['🔢 数独で新しい猫を出す','🔢 すうどくで あたらしい ねこを だす'],
+  menuLead:['ナンプレを解くと、新しい猫が出てきます。ジグソーパズルは、出た猫やイラストを選んで遊べます','ナンプレを とくと、あたらしい ねこが でてきます。ジグソーパズルは、でた ねこや イラストを えらんで あそべます'],
+  sdCardT:['🔢 ナンプレで新しい猫を出す','🔢 ナンプレで あたらしい ねこを だす'],
   sdcLimit:['今日の新しい猫はおしまい(明日また出ます)','きょうの あたらしい ねこは おしまい(あした また でます)'],
   sdcNone:['新しい猫は準備中です','あたらしい ねこは じゅんびちゅう です'],
   sdmNew:['解くと、新しい猫が出てきます。3×3の9マスを埋めて「🐱 絵を見る」を押すと、少しずつ見えてきます','とくと、あたらしい ねこが でてきます。3×3の 9マスを うめて「🐱 えを みる」を おすと、すこしずつ みえてきます'],
@@ -38,7 +38,7 @@ const T={
   saveNo:['この絵は保存できません','この えは ほぞん できません'],
   menu:['◀ メニュー','◀ メニュー'],
   gJig:['ジグソーパズル','ジグソーパズル'],gJigD:['絵を組み立てる','えを くみたてる'],
-  gSd:['数独','すうどく'],gSdD:['数字を入れる','すうじを いれる'],
+  gSd:['ナンプレ','ナンプレ'],gSdD:['数字を入れる','すうじを いれる'],
   hPic:['🧩 ジグソーパズルの絵を選ぶ','🧩 ジグソーパズルの えを えらぶ'],
   hCnt:['① ピースの数','① ピースの かず'],
   hRot:['② ピースの向き','② ピースの むき'],
@@ -108,7 +108,7 @@ const T={
   apvAdd:['+ 写真を足す','+ しゃしんを たす'],
   apvAddDone:['今日はここまでです。明日また足せます','きょうは ここまで です。あした また たせます'],
   apvNoMore:['新しい写真は、まだありません','あたらしい しゃしんは、まだ ありません'],
-  apvClearHelp:['数独をクリアすると、新しい猫が出ます','すうどくを クリアすると、あたらしい ねこが でます'],
+  apvClearHelp:['ナンプレをクリアすると、新しい猫が出ます','ナンプレを クリアすると、あたらしい ねこが でます'],
   apvOpen1:['▼ 前の写真も見る','▼ まえの しゃしんも みる'],
   apvClose:['▲ 前の写真をたたむ','▲ まえの しゃしんを たたむ'],
   admApvSt:['許可リスト','きょか リスト'],
@@ -167,7 +167,7 @@ const T={
   c6:['難しい','むずかしい'],c7:['とても難しい','とても むずかしい'],c8:['達人','たつじん'],
   r0:['そろっている','そろっている'],r0d:['向きはそのまま','むきは そのまま'],
   r1:['ばらばら','ばらばら'],r1d:['触ると回る','さわると まわる'],
-  // 数独
+  // ナンプレ
   sdLead:['難しさを選んで始めてください','むずかしさを えらんで はじめてください'],
   sdCont:['▶ 続きから','▶ つづきから'],
   sdHLv:['難しさ','むずかしさ'],sdHNew:['新しい問題','あたらしい もんだい'],
@@ -360,7 +360,7 @@ const images=[
   {nm:['子猫と毛糸','こねこと けいと'],url:svgUrl(SVG_KITTEN)},
   {nm:['窓辺','まどべ'],url:svgUrl(SVG_WINDOW)},
 ].map(o=>Object.assign(o,loadImg(o.url)));
-const SAMPLE_N=images.length; // 数独の完成画面に出す絵(サンプルの猫イラスト)
+const SAMPLE_N=images.length; // ナンプレの完成画面に出す絵(サンプルの猫イラスト)
 const picName=o=>o.nm?o.nm[kana]:o.kept?t('photoN'):t('photoN')+' '+apvSeqLabel(o.no);
 const COUNTS=[2,3,4,5,6,7,8];
 // 絵の選択:selApi=猫の写真(API)の番号、selAlb=ごほうびの絵の番号(どちらも -1 ならイラスト・iPadの写真の selPic)
@@ -397,7 +397,7 @@ function renderPics(){
 /* ====== 猫の写真(許可リスト方式) ====== */
 // 管理者が確認して許可した写真だけを使う。一覧は同じサイトの approved.json(番号・アドレス・写真の中身の指紋 SHA-256)。
 // iPad は一覧の写真をまとめて読み込み、指紋が一致したものだけを iPad 内(IndexedDB 'apv')に保存する(取得元で差し替えられても出さない)。
-// 見せる写真(出た猫)は少しずつ増やす:最初に6枚、数独をクリアするたびに1枚(1日2枚まで。管理用の設定で変更可)。番号の小さい順
+// 見せる写真(出た猫)は少しずつ増やす:最初に6枚、ナンプレをクリアするたびに1枚(1日2枚まで。管理用の設定で変更可)。番号の小さい順
 // 候補探し(The Cat API / cataas)は管理用の画面だけで使う
 const CAT_KEY='neko-catapi-key';
 const CAT_KEY_RE=/^[A-Za-z0-9_-]{8,100}$/;
@@ -406,7 +406,7 @@ const CATAAS_ID_RE=/^[A-Za-z0-9_-]{6,40}$/;
 const CATAAS_IMG_RE=/^https:\/\/cataas\.com\/cat\/[A-Za-z0-9_-]{6,40}$/;
 const APV_URL='approved.json',APV_MAX=60,APV_ADM_MAX=50,APV_FIRST=6,APV_SHOW=6,HASH_RE=/^[0-9a-f]{64}$/;
 const APV_OPEN_KEY='neko-apv-open',APV_BAD_KEY='neko-apv-bad',APV_NEW_KEY='neko-apv-new';
-// 1日に出せる新しい猫(数独のクリアで1枚)。使わなかった分は持ち越さない
+// 1日に出せる新しい猫(ナンプレのクリアで1枚)。使わなかった分は持ち越さない
 const CAT_LIMIT_KEY='neko-sd-limit',CAT_QUOTA_KEY='neko-sd-quota',CAT_LIMIT_DEF=2,CAT_LIMIT_MAX=50;
 try{localStorage.removeItem('neko-apv-limit');localStorage.removeItem('neko-apv-quota');}catch(e){}
 let catShowAll=false,catItems=[],catState='idle',catGen=0,apvPool=[],apvList=null,apvNoSave=false,apvFold=true,apvLast=0;
@@ -645,7 +645,7 @@ function apvTopUp(){
   }
   apvUnlock(APV_FIRST-n);
 }
-// 数独をクリアしたら、遊んだ新しい猫(始めたときに決めた番号)を出す。出せたら番号を返す
+// ナンプレをクリアしたら、遊んだ新しい猫(始めたときに決めた番号)を出す。出せたら番号を返す
 function apvUnlockNo(no){
   if(!no)return 0;
   const op=apvOpen();if(op.includes(no))return 0;
@@ -653,7 +653,7 @@ function apvUnlockNo(no){
   op.push(no);apvOpenSave(op);const nw=apvNew();nw.add(no);apvNewSave(nw);catUse();
   apvRebuild();renderAllPics();return no;
 }
-// 数独の絵の決め方。new:まだ出ていない猫(番号の小さい順)、limit/none:出た猫からランダム、illust:イラストからランダム、wait:読み込み中
+// ナンプレの絵の決め方。new:まだ出ていない猫(番号の小さい順)、limit/none:出た猫からランダム、illust:イラストからランダム、wait:読み込み中
 function sdMode(){
   if(catState!=='ok')return 'wait';
   const rest=apvRest().length;
@@ -667,7 +667,7 @@ function sdPick(){
   if(m==='limit'||m==='none')return {item:rnd(catItems),nw:0};
   return {item:rnd(images.slice(0,SAMPLE_N)),nw:0};
 }
-// 最初の画面の数独のカード・数独の開始画面の案内
+// 最初の画面のナンプレのカード・ナンプレの開始画面の案内
 function renderSdCard(){
   const s=$('#sdCardS');if(!s)return;
   const k=kana?'まい':'枚',rest=apvRest().length,left=catLeft();
@@ -1562,7 +1562,7 @@ const idbDel=k=>idbReq('readwrite',s=>{s.delete(k);});
 // 書き込み・読み込みは順番どおりに行う
 const jgQueue=f=>(jgQ=jgQ.then(()=>f(),()=>f()));
 function jgClear(){jgQueue(()=>Promise.all([idbDel('jigsaw'),idbDel('jigsaw-img')]));}
-// 途中保存用の絵の記録(ジグソー・数独で共通)。猫の写真なら取得元とアドレスも残す(クリア時にごほうびへ入れるため)
+// 途中保存用の絵の記録(ジグソー・ナンプレで共通)。猫の写真なら取得元とアドレスも残す(クリア時にごほうびへ入れるため)
 function jgImgRec(item,img){
   const idx=images.indexOf(item);
   if(item.nm&&idx>=0&&idx<SAMPLE_N)return Promise.resolve({kind:'sample',idx});
@@ -1690,7 +1690,7 @@ let toastT=null;
 function toast(key,ms){const e=$('#toast');e.textContent=t(key);e.classList.add('on');clearTimeout(toastT);if(ms)toastT=setTimeout(()=>e.classList.remove('on'),ms);}
 function hideToast(){clearTimeout(toastT);$('#toast').classList.remove('on');}
 
-/* ====== 数独:問題づくり ====== */
+/* ====== ナンプレ:問題づくり ====== */
 // 盤は長さ81の配列(0=空き)。r=行, c=列, b=3×3のかたまり
 const SD_LV=[ // giv:最初の数字の目安 / singles:基本の解き方(そこにしか入らない)だけで解ける問題にする
   {giv:36,singles:true},{giv:31,singles:true},{giv:28,singles:false},{giv:22,singles:false}];
@@ -1768,7 +1768,7 @@ function sdMake(lv){
   return best;
 }
 
-/* ====== 数独:遊ぶ ====== */
+/* ====== ナンプレ:遊ぶ ====== */
 const SD_KEY='sudoku-save',SD_OPT='sudoku-opt';
 let sd=null,sdSel=-1,sdMemoMode=false,sdUndo=[],sdT0=0,sdTimer=null,sdPlaying=false,sdLastSec=null,sdSelLv=0;
 const sdOpt={err:false,same:true}; // 間違いの赤表示は、はじめは「なし」
@@ -1799,7 +1799,7 @@ function sdLoad(){
   }catch(e){return null;}
 }
 function sdClearSave(){try{localStorage.removeItem(SD_KEY);}catch(e){}jgQueue(()=>idbDel('sudoku-img'));}
-// 数独の絵(遊ぶ絵 sdItem)。盤の後ろに置き、3×3ごとに見せる
+// ナンプレの絵(遊ぶ絵 sdItem)。盤の後ろに置き、3×3ごとに見せる
 let sdItem=null;
 function sdSetPic(item){sdItem=item;$('#sdImg').src=safeImgUrl(item&&item.url);}
 // 絵の記録を書く(続きから遊ぶとき同じ絵を出すため)
@@ -1810,7 +1810,7 @@ async function sdPicRec(item){
   if(rec&&sd&&sd.img===id){rec.id=id;jgQueue(()=>idbPut('sudoku-img',rec));}
 }
 
-/* ====== 数独:記録(同じ問題に繰り返し挑戦) ====== */
+/* ====== ナンプレ:記録(同じ問題に繰り返し挑戦) ====== */
 // localStorage 'sudoku-recs' に {v:1, list:[{id, lv, giv, sol, best:{t:秒, h:ヒント数}, tries, last:最後に遊んだ時刻(ms), fav}]}
 // 残すのは ★の問題(30問まで)+ ★なしの最近の10問
 const SD_RECS='sudoku-recs',SD_RID=/^[a-z0-9]{4,24}$/,SD_FAV_MAX=30,SD_RECENT_MAX=10;
@@ -2128,7 +2128,7 @@ function sdFinish(){
 // クリアで出た新しい猫の知らせ
 let sdNewNo=0;
 function sdNewCatPaint(){const e=$('#sdNewCat');e.style.display=sdNewNo?'':'none';e.textContent=sdNewNo?t('sdNewCat')+(kana?'('+apvSeqLabel(sdNewNo)+'ばん)':'('+apvSeqLabel(sdNewNo)+'番)'):'';}
-// 最初の画面の数独の「続きから」(絵の小さな画像つき。新しい猫のときは「?」にして中身を見せない)
+// 最初の画面のナンプレの「続きから」(絵の小さな画像つき。新しい猫のときは「?」にして中身を見せない)
 let sdThumbUrl=null,sdContGen=0;
 async function renderSdCont(){
   const gen=++sdContGen,sv=sdLoad(),cb=$('#sdCont');
@@ -2295,7 +2295,7 @@ $('#admConnBtn').onclick=admConn;
 if($('#admBadClr'))$('#admBadClr').onclick=async()=>{const b=$('#admBadClr');b.disabled=true;apvBadClear();apvStat.bad=0;admRender('admBadRe');try{await initCats();}finally{b.disabled=false;admRender('admBadReDone');}};
 if($('#admAll'))$('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRebuild();renderAllPics();renderSel();admRender('');};
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
-// テスト用のボタン(数独の「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
+// テスト用のボタン(ナンプレの「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
 function testOn(){try{return localStorage.getItem(TEST_KEY)==='1';}catch(e){return false;}}
 function renderTest(){const on=testOn();$('#sdTestFill').style.display=on?'':'none';$('#jgTestFill').style.display=on?'':'none';}
