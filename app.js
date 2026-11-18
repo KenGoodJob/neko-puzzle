@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118194646';
+const APP_VERSION='20261118200040';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -225,8 +225,9 @@ const T={
   giftJg:['クリアすると🎁が付き、この猫をiPadに保存できるようになります','クリアすると 🎁が つき、この ねこを iPadに ほぞん できるように なります'],
   giftJgR:['クリアすると🎁が付きます','クリアすると 🎁が つきます'],
   giftZoomR:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
-  keepFavOff:['この猫は、★をやめると一覧から消えます(もう出てきません)。やめるときは、もう一度押してください','この ねこは、★を やめると いちらんから きえます(もう でてきません)。やめる ときは、もう いちど おしてください'],
+  keepFavOff:['この猫は、★をやめると一覧から消えます(もう出てきません)。消してよい場合は、もう一度押してください','この ねこは、★を やめると いちらんから きえます(もう でてきません)。けして よい ばあいは、もう いちど おしてください'],
   keepFavOff2:['もう一度押すと★をやめます','もう いちど おすと ★を やめます'],
+  zoomNoL:['ID','ID'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
   admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
@@ -586,17 +587,32 @@ function apvBadText(e){
   if(e.sz&&a&&a!=='fp')return t('apvBadSz')+'('+(kana?'きろく ':'記録 ')+e.sz[0]+'×'+e.sz[1]+(kana?' / じっさい ':'/実際 ')+a.replace('x','×')+')';
   return t(e.sz?'apvBadSz':'apvBadFp');
 }
+// 写真は Blob ではなくバイト列(ArrayBuffer)で保存する(2026-11-18)。
+// iPad の Safari では、保存し直したあとに前に読んだ Blob が読めなくなることがあるため(画像が出なくなった)
 function apvSaveDb(){
   if(apvNoSave)return;
-  const list=apvPool.filter(o=>o.blob instanceof Blob).map(o=>({no:o.no,u:o.ou,h:o.h,blob:o.blob}));
+  const list=apvPool.filter(o=>o.buf instanceof ArrayBuffer).map(o=>({no:o.no,u:o.ou,h:o.h,buf:o.buf}));
   jgQueue(()=>idbPut('apv',{v:1,list}));
 }
+// 保存した写真を読む。読めなかった写真は bad に入れ、取得元から読み直す
 async function apvLoadDb(){
   const o=await jgQueue(()=>idbGet('apv'));
   if(o===IDB_ERR)throw new Error('idb');
-  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return [];
-  return o.list.filter(e=>e&&Number.isInteger(e.no)&&catOkUrl(e.u)&&typeof e.h==='string'&&HASH_RE.test(e.h)&&e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6).slice(0,400); // 残した猫(段階4)のぶん多めに
+  if(!o||typeof o!=='object'||o.v!==1||!Array.isArray(o.list))return {ok:[],bad:[],old:false};
+  const ok=[],bad=[];let old=false;
+  for(const e of o.list.slice(0,400)){ // 残した猫(段階4)のぶん多めに
+    if(!e||!Number.isInteger(e.no)||e.no<1||e.no>99999||!catOkUrl(e.u)||typeof e.h!=='string'||!HASH_RE.test(e.h))continue;
+    let buf=null;
+    try{
+      if(e.buf instanceof ArrayBuffer)buf=e.buf;
+      else if(e.blob instanceof Blob&&e.blob.type==='image/jpeg'&&e.blob.size<20e6){old=true;buf=await e.blob.arrayBuffer();}
+    }catch(err){buf=null;}
+    if(buf&&buf.byteLength>100&&buf.byteLength<20e6&&jpegHead(buf))ok.push({no:e.no,u:e.u,h:e.h,buf});
+    else bad.push({no:e.no,u:e.u,h:e.h});
+  }
+  return {ok,bad,old};
 }
+function jpegHead(buf){const a=new Uint8Array(buf,0,3);return a[0]===0xFF&&a[1]===0xD8&&a[2]===0xFF;}
 // 表示用の連番:許可リストの並び順(1から)。no はアプリが写真を見分ける番号(変えない)。出る順番も並び順
 // 一覧が読めないとき(通信なし)のため、最後に読んだ並び(no の配列)を覚えておく
 const APV_SEQ_KEY='neko-apv-seq';
@@ -608,8 +624,8 @@ const apvSeqLabel=no=>String(apvSeq(no)||'?');
 const apvBadKey=e=>e.no+':'+(e.sz?e.sz[0]+'x'+e.sz[1]:e.h);
 function apvMakeRemote(e,img,ready){return {api:true,remote:true,src:catSrcOf(e.u),ou:e.u,blob:null,url:e.u,img,ready,no:e.no,h:'',sz:e.sz};}
 function apvMakeItem(e){
-  const url=URL.createObjectURL(e.blob),{img,ready}=loadImg(url);
-  return {api:true,src:catSrcOf(e.u),ou:e.u,blob:e.blob,url,img,ready,no:e.no,h:e.h};
+  const blob=new Blob([e.buf],{type:'image/jpeg'}),url=URL.createObjectURL(blob),{img,ready}=loadImg(url);
+  return {api:true,src:catSrcOf(e.u),ou:e.u,blob,buf:e.buf,url,img,ready,no:e.no,h:e.h};
 }
 // 見せる写真(解放した写真のうち、保存済みで消していないもの)。新しく解放した順
 function apvRebuild(){
@@ -696,8 +712,8 @@ async function initCats(){
   try{await initCatsRun(gen);}finally{dlEnd(gen);}
 }
 async function initCatsRun(gen){
-  let saved=[];
-  try{saved=await apvLoadDb();apvNoSave=false;}catch(e){apvNoSave=true;}
+  let saved=[],broken=[],oldFmt=false;
+  try{const r=await apvLoadDb();saved=r.ok;broken=r.bad;oldFmt=r.old;apvNoSave=false;}catch(e){apvNoSave=true;}
   if(gen!==catGen)return;
   // 古い方式の写真(ランダムな6枚)は使わない
   if(!apvNoSave)jgQueue(()=>idbDel('cats'));
@@ -717,7 +733,11 @@ async function initCatsRun(gen){
     apvRmetaSave(lr.concat(kRem));
   }
   apvKeepNos=new Set(apvPool.filter(o=>o.kept).map(o=>o.no).concat(kRem.map(e=>e.no)));
-  if(lst&&keep.length!==saved.length)apvSaveDb();
+  // 保存の形を新しくした(バイト列)・読めない写真があったときも保存し直す
+  if((lst&&(keep.length!==saved.length||broken.length))||oldFmt)apvSaveDb();
+  // 読めなかった写真のうち、残す猫(一覧から外した🎁・★の猫)は取得元から読み直す(一覧にある写真は下の todo で読み直す)
+  const kFix=lst?broken.filter(e=>!lst.list.some(x=>x.no===e.no)&&apvKeepOk(e.no,e.u)&&!apvPool.some(o=>o.no===e.no)):[];
+  kFix.forEach(e=>apvKeepNos.add(e.no));
   apvRebuild();apvTopUp();
   catState='ok';apvStat.list=lst?lst.list.length:apvStat.list;apvStat.saved=apvPool.length;
   renderAllPics();renderSel();
@@ -726,7 +746,7 @@ async function initCatsRun(gen){
   const have=new Set(apvPool.map(o=>o.no)),bad=apvBad(),ng=new Set(catNg());
   apvStat.bad=lst.list.filter(e=>bad.has(apvBadKey(e))).length;
   const rem=lst.list.concat(kRem).filter(e=>e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(apvBadKey(e)));
-  const todo=lst.list.filter(e=>!e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
+  const todo=lst.list.concat(kFix).filter(e=>!e.sz&&!have.has(e.no)&&!ng.has(e.u)&&!bad.has(e.no+':'+e.h));
   if(!todo.length&&!rem.length)return;
   dlSt={done:0,total:rem.length+todo.length};dlPaint();
   // The Cat API の写真:取得元から読み、大きさが合えば使う(iPad 内には保存しない)
@@ -748,8 +768,10 @@ async function initCatsRun(gen){
       const {buf,type}=await fetchBytes(e.u);
       if(await sha256(buf)!==e.h){apvBadAdd(e.no+':'+e.h,'fp');apvStat.bad++;continue;}
       const blob=await bytesToJpeg(buf,type);if(!blob)continue;
+      const jb=await blob.arrayBuffer();
       if(gen!==catGen)return;
-      apvPool.push(apvMakeItem({no:e.no,u:e.u,h:e.h,blob}));apvSaveDb();
+      const it=apvMakeItem({no:e.no,u:e.u,h:e.h,buf:jb});if(kFix.includes(e))it.kept=true;
+      apvPool.push(it);apvSaveDb();
       apvStat.saved=apvPool.length;
       apvRebuild();apvTopUp();renderAllPics();
     }catch(err){}
@@ -936,6 +958,7 @@ function zoomOpen(item){
   qBind($('#zoomImg'),$('#zoomQ'),!item.nm);
   $('#zoomImg').src=safeImgUrl(item.url);$('#zoomSave').disabled=true;$('#zoomOv').classList.add('on');
   // 🎁のない猫・アプリから保存できない写真は、保存ボタンを出さない
+  zoomIdPaint(item);
   const zs=$('#zoomSave'),zh=$('#zoomHint'),ok=canSave(item);
   zs.style.display=ok&&!item.remote?'':'none';zh.classList.toggle('only',!ok||!!item.remote);
   zh.dataset.k=!ok?'giftNeed':item.remote?'giftZoomR':'saveHow';zh.textContent=t(zh.dataset.k);
@@ -946,8 +969,16 @@ function zoomOpen(item){
     zoomUrl=URL.createObjectURL(f);$('#zoomImg').src=zoomUrl;$('#zoomSave').disabled=false;
   });
 }
+// 大きく見る画面の下に、猫の番号と識別番号(no。管理用の画面・許可リストの番号)を小さく出す。管理者とのやり取り用
+let zoomItem=null;
+function zoomIdPaint(item){
+  zoomItem=item||null;const el=$('#zoomId');if(!el)return;
+  if(!item||!item.api||!Number.isInteger(item.no)||item.no<1){el.hidden=true;el.textContent='';return;}
+  const sq=item.kept?0:apvSeq(item.no);
+  el.textContent=(sq?sq+(kana?'ばん':'番')+' ・ ':'')+t('zoomNoL')+' '+item.no;el.hidden=false;
+}
 function zoomClose(){
-  zoomTok=null;zoomFile=null;$('#zoomOv').classList.remove('on');$('#zoomImg').removeAttribute('src');
+  zoomTok=null;zoomFile=null;zoomIdPaint(null);$('#zoomOv').classList.remove('on');$('#zoomImg').removeAttribute('src');
   if(zoomUrl){URL.revokeObjectURL(zoomUrl);zoomUrl=null;}
 }
 $('#zoomSave').onclick=()=>{ensureAudio();if(zoomFile)sharePic(zoomFile);};

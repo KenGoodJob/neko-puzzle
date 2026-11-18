@@ -35,9 +35,10 @@ button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .gift{font-weight:bold;color:#9A6A00!important;background:#FFF6D6;border-radius:16px;padding:8px 12px}
 .ov.zoom{background:rgba(30,22,16,.85)}
 .zbox{display:flex;flex-direction:column;align-items:center;gap:20px}
-#zoomImg{width:min(92vw,calc(100vh - 220px));height:min(92vw,calc(100vh - 220px));object-fit:contain;border-radius:18px;border:6px solid #fff;background:#fff;display:block}
+#zoomImg{width:min(92vw,calc(100vh - 250px));height:min(92vw,calc(100vh - 250px));object-fit:contain;border-radius:18px;border:6px solid #fff;background:#fff;display:block}
 #zoomClose,#zoomSave{min-width:260px;min-height:88px;font-size:30px}
 .zhint{color:#fff;font-size:19px;margin:0;opacity:.9;text-align:center}
+.zid{color:#fff;font-size:16px;margin:-8px 0 0;opacity:.75;text-align:center}
 .kana .zhint{word-break:keep-all;overflow-wrap:anywhere}
 /* 長押しで「写真に追加」できるように */
 #zoomImg,#sdCat,#doneImg{-webkit-touch-callout:default;pointer-events:auto}
@@ -532,6 +533,7 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
     <button class="bb p" id="zoomClose" data-t="close">閉じる</button>
   </div>
   <p class="zhint" id="zoomHint">「📥 iPadに保存」を押したあと、「画像を保存」を押してください</p>
+  <p class="zid" id="zoomId" hidden></p>
 </div></div>
 
 <div class="ov" id="mihonOv"><div class="dlg">
@@ -703,6 +705,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261118194646"></script>
+<script src="app.js?v=20261118200040"></script>
 </body>
 </html>
