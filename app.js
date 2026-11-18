@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118201835';
+const APP_VERSION='20261118203308';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -54,7 +54,7 @@ const T={
   guide:['台に薄く絵を出す','だいに うすく えを だす'],
   mini:['小さい見本を出す','ちいさい みほんを だす'],
   sound:['音','おと'],
-  quitQ:['パズルをやめますか?','パズルを やめますか?'],
+  quitQ:['パズルをやめますか?','パズルを やめますか?'],sdQuitQ:['ナンプレをやめますか?','ナンプレを やめますか?'],
   quitP:['途中までの続きは残ります。次は「続きから」で遊べます','とちゅうまでの つづきは のこります。つぎは「つづきから」で あそべます'],
   quitP0:['やめると、途中の続きは残りません','やめると、とちゅうの つづきは のこりません'],
   jgHNew:['新しく始める','あたらしく はじめる'],
@@ -1488,12 +1488,16 @@ function jgStartNew(){show('play');requestAnimationFrame(()=>newGame());}
 $('#goBtn').onclick=()=>{ensureAudio();if(jgContData&&!jgNewOk)newAsk('#jgNewOv','#jgNewH','#jgNewPp',false,'jgNewQ','jgNewP');else{jgNewOk=false;jgStartNew();}};
 $('#backBtn').onclick=()=>{
   if(!playing){goStart();return;}
-  const p=$('#quitOv p');p.dataset.t=jgCanSave?'quitP':'quitP0';p.textContent=t(p.dataset.t);
-  $('#quitOv').classList.add('on');
+  quitAsk('jg',jgCanSave?'quitP':'quitP0');
 };
+// 「戻る」の確認(ジグソー・ナンプレ共通の窓。2026-11-18にナンプレも確認するようにした)
+function quitAsk(g,pk){
+  const o=$('#quitOv'),h=$('#quitH'),p=$('#quitOv p');o.dataset.g=g;
+  h.dataset.t=g==='sd'?'sdQuitQ':'quitQ';h.textContent=t(h.dataset.t);p.dataset.t=pk;p.textContent=t(pk);o.classList.add('on');
+}
 $('#quitOv').onclick=e=>{if(e.target.id==='quitOv')$('#quitOv').classList.remove('on');};
 $('#quitNo').onclick=()=>$('#quitOv').classList.remove('on');
-$('#quitYes').onclick=()=>{$('#quitOv').classList.remove('on');goStart();};
+$('#quitYes').onclick=()=>{const o=$('#quitOv');o.classList.remove('on');if(o.dataset.g==='sd')sdQuit();else goStart();};
 $('#againBtn').onclick=()=>{$('#doneOv').classList.remove('on');newGame(jgItem);};
 $('#otherBtn').onclick=()=>{$('#doneOv').classList.remove('on');goStart();};
 function setTg(btn,on){btn.classList.toggle('on',on);btn.querySelector('b').textContent=on?'あり':'なし';}
@@ -2212,7 +2216,9 @@ $('#sdNewYes').onclick=()=>{const o=$('#sdNewOv');o.classList.remove('on');if(o.
 $('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id);};
 $('#sdFavBtn').onclick=()=>{if(sdDoneRec&&sdToggleFav(sdDoneRec.id))sdRenderDone();};
 // 戻る:途中は自動で保存されるので、確認なしで戻る(次は「続きから」で再開)
-$('#sdBackBtn').onclick=()=>{qpClose();lpCancel();if(sdPlaying)sdPause();sdPlaying=false;hideToast();show('menu');renderSdCont();};
+function sdQuit(){qpClose();lpCancel();if(sdPlaying)sdPause();sdPlaying=false;hideToast();show('menu');renderSdCont();}
+// 遊んでいる途中はジグソーと同じく確認する(途中は自動で保存されている)
+$('#sdBackBtn').onclick=()=>{if(!sdPlaying){sdQuit();return;}qpClose();lpCancel();quitAsk('sd','quitP');};
 $('#sdHintBtn').onclick=sdHint;
 $('#sdEraseBtn').onclick=sdErase;
 $('#sdUndoBtn').onclick=sdDoUndo;
