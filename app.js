@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118203308';
+const APP_VERSION='20261118211116';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -2057,6 +2057,7 @@ function sdBlocks(){
 const sdShown=(bl,b)=>!!(sd.rv&(1<<b))&&bl.ok[b];
 function sdDraw(){
   if(!sd)return;
+  if(sdPlaying)$('#sdBoard').classList.remove('fin');
   const sv=sdSel>=0?sd.cur[sdSel]:0,cnt=Array(10).fill(0),bl=sdBlocks();
   sd.cur.forEach(v=>cnt[v]++);
   for(let i=0;i<81;i++){
@@ -2173,8 +2174,14 @@ function sdFinish(){
   $('#sdGift').style.display='none';sdNewCatPaint();
   if(sdNewNo)[784,988,1175].forEach((f,i)=>tone(f,1.6+i*.14,.35,.12));
   donePrep(sdItem,'#sdSave');
-  setTimeout(()=>$('#sdDoneOv').classList.add('on'),900);
+  // 数字と線を消して絵だけを約3秒見せてから完成画面(タップするとすぐ完成画面)。2026-11-18
+  const gen=++sdFinGen;$('#sdFinTap').classList.add('on');
+  setTimeout(()=>{if(gen===sdFinGen)$('#sdBoard').classList.add('fin');},300);
+  setTimeout(()=>sdFinShow(gen),3300);
 }
+let sdFinGen=0;
+function sdFinShow(gen){if(gen!==sdFinGen)return;sdFinGen++;$('#sdFinTap').classList.remove('on');$('#sdDoneOv').classList.add('on');}
+$('#sdFinTap').onclick=()=>sdFinShow(sdFinGen);
 // クリアで出た新しい猫の知らせ
 let sdNewNo=0;
 function sdNewCatPaint(){const e=$('#sdNewCat');e.style.display=sdNewNo?'':'none';e.textContent=sdNewNo?t('sdNewCat')+(kana?'('+apvSeqLabel(sdNewNo)+'ばん)':'('+apvSeqLabel(sdNewNo)+'番)'):'';}
