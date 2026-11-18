@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261119035303';
+const APP_VERSION='20261119040753';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -1010,7 +1010,7 @@ const SLIDE_INT_KEY='neko-slide-int',SLIDE_INTS=[5,10,20,30],SLIDE_MODE_KEY='nek
 let slideOn=false,slideQ=[],slideTm=null,slideClk=null,slideHintT=null,slideLock=null,slideSlot=0,slideTwoNow=false;
 const slideShown=['',''];// 今出ている猫のアドレス(1枚は[0]だけ、2枚は左上・右下)
 function slideInt(){try{const v=Number(localStorage.getItem(SLIDE_INT_KEY));return SLIDE_INTS.includes(v)?v:10;}catch(e){return 10;}}
-function slideMode(){try{return localStorage.getItem(SLIDE_MODE_KEY)==='2'?2:1;}catch(e){return 1;}}
+function slideMode(){try{return localStorage.getItem(SLIDE_MODE_KEY)==='1'?1:2;}catch(e){return 2;}}
 // 🎁の猫(出た猫の一覧にある猫だけ。消した猫・一覧から消えた猫は出さない)
 function slideItems(){const g=new Set(catGift());return catItems.filter(o=>o&&g.has(o.ou)&&o.url);}
 function slideBtnPaint(){
