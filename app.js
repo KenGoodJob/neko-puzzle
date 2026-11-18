@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118153420';
+const APP_VERSION='20261118194646';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -179,7 +179,7 @@ const T={
   sdNewQ:['新しい問題を始めますか?','あたらしい もんだいを はじめますか?'],
   sdNewP:['途中の問題は消えます','とちゅうの もんだいは きえます'],
   sdNewNo:['続きを遊ぶ','つづきを あそぶ'],sdNewYes:['新しく始める','あたらしく はじめる'],
-  sdAgain:['もう一問','もう いちもん'],sdOther:['難しさを変える','むずかしさを かえる'],
+  sdHome:['🏠 最初の画面へ','🏠 さいしょの がめんへ'],  sdAgain:['もう一問','もう いちもん'],sdOther:['難しさを変える','むずかしさを かえる'],
   sdMaking:['問題を作っています…','もんだいを つくっています…'],
   sdNotYet:['合っていないマスがあります','あっていない マスが あります'],
   sdRecH:['記録のある問題','きろくの ある もんだい'],
@@ -2177,6 +2177,7 @@ $('#sdErrBtn').onclick=e=>{sdOpt.err=!sdOpt.err;setTg(e.currentTarget,sdOpt.err)
 $('#sdSameBtn').onclick=e=>{sdOpt.same=!sdOpt.same;setTg(e.currentTarget,sdOpt.same);sdSaveOpt();sdDraw();};
 $('#sdSoundBtn').onclick=e=>{soundOn=!soundOn;ensureAudio();setTg(e.currentTarget,soundOn);};
 $('#sdAgainBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdNew(sd?sd.lv:sdSelLv);};
+$('#sdHomeBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');hideToast();show('menu');renderSdCont();};
 $('#sdOtherBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');sdRenderStart();show('sdStart');};
 // 画面を離れたら時間を止めて保存する
 document.addEventListener('visibilitychange',()=>{
