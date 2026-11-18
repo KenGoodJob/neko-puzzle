@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118200040';
+const APP_VERSION='20261118201835';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -60,6 +60,7 @@ const T={
   jgHNew:['新しく始める','あたらしく はじめる'],
   jgNewQ:['新しく始めますか?','あたらしく はじめますか?'],
   jgNewP:['途中のパズルは消えます','とちゅうの パズルは きえます'],
+  jgEntQ:['途中のパズルがあります','とちゅうの パズルが あります'],jgEntP:['新しく始めると、途中のパズルは消えます','あたらしく はじめると、とちゅうの パズルは きえます'],
   quitNo:['続ける','つづける'],
   quitYes:['やめる','やめる'],
   done:['完成!','かんせい!'],
@@ -178,6 +179,7 @@ const T={
   sdErr:['間違いを赤く出す','まちがいを あかく だす'],sdSame:['同じ数字に色を付ける','おなじ すうじに いろを つける'],
   sdNewQ:['新しい問題を始めますか?','あたらしい もんだいを はじめますか?'],
   sdNewP:['途中の問題は消えます','とちゅうの もんだいは きえます'],
+  sdEntQ:['途中の問題があります','とちゅうの もんだいが あります'],sdEntP:['新しく始めると、途中の問題は消えます','あたらしく はじめると、とちゅうの もんだいは きえます'],
   sdNewNo:['続きを遊ぶ','つづきを あそぶ'],sdNewYes:['新しく始める','あたらしく はじめる'],
   sdHome:['🏠 最初の画面へ','🏠 さいしょの がめんへ'],  sdAgain:['もう一問','もう いちもん'],sdOther:['難しさを変える','むずかしさを かえる'],
   sdMaking:['問題を作っています…','もんだいを つくっています…'],
@@ -1105,11 +1107,18 @@ document.querySelectorAll('.lgb').forEach(b=>{b.onclick=()=>setLang(Number(b.dat
 applyLang();
 
 /* ====== 音 ====== */
-let ac=null, soundOn=true;
+let ac=null, soundOn=true, acUnlocked=false;
+// どの画面のどこをタップしても音を起こす(パズルのピース・ナンプレのマスなど、ボタン以外のタップも)
+document.addEventListener('pointerdown',()=>{try{if(!ac||ac.state!=='running'||!acUnlocked)ensureAudio();}catch(e){}},true);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)acUnlocked=false;});
 function ensureAudio(){
   try{
-    if(!ac){const C=window.AudioContext||window.webkitAudioContext;if(C)ac=new C();}
-    if(ac&&ac.state==='suspended')ac.resume().catch(()=>{});
+    if(ac&&ac.state==='closed')ac=null;
+    if(!ac){const C=window.AudioContext||window.webkitAudioContext;if(C)ac=new C();acUnlocked=false;}
+    // iPad の Safari は、別のアプリから戻ったとき・画面を消したあとなどに 'suspended' や 'interrupted' のまま止まることがある
+    if(ac&&ac.state!=='running')ac.resume().catch(()=>{});
+    // タップの中で無音を1回鳴らすと、iPad で音が出るようになる
+    if(ac&&!acUnlocked){const b=ac.createBuffer(1,1,22050),src=ac.createBufferSource();src.buffer=b;src.connect(ac.destination);src.start(0);acUnlocked=true;}
   }catch(e){}
 }
 function tone(f,dt,d,v){
@@ -1476,7 +1485,7 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.to
 // 戻る・やめる:遊んでいる途中なら保存してから最初の画面へ(次は「続きから」)
 function goStart(){if(playing){jgPause();jgSave();}playing=false;clearInterval(timer);hideHint();show('menu');renderJgCont();}
 function jgStartNew(){show('play');requestAnimationFrame(()=>newGame());}
-$('#goBtn').onclick=()=>{ensureAudio();if(jgContData)$('#jgNewOv').classList.add('on');else jgStartNew();};
+$('#goBtn').onclick=()=>{ensureAudio();if(jgContData&&!jgNewOk)newAsk('#jgNewOv','#jgNewH','#jgNewPp',false,'jgNewQ','jgNewP');else{jgNewOk=false;jgStartNew();}};
 $('#backBtn').onclick=()=>{
   if(!playing){goStart();return;}
   const p=$('#quitOv p');p.dataset.t=jgCanSave?'quitP':'quitP0';p.textContent=t(p.dataset.t);
@@ -1699,7 +1708,7 @@ async function jgRestore(d){
 $('#jgCont').onclick=()=>{ensureAudio();const d=jgContData;if(!d)return;show('play');requestAnimationFrame(()=>jgRestore(d));};
 $('#jgNewOv').onclick=e=>{if(e.target.id==='jgNewOv')$('#jgNewOv').classList.remove('on');};
 $('#jgNewNo').onclick=()=>{$('#jgNewOv').classList.remove('on');$('#jgCont').onclick();};
-$('#jgNewYes').onclick=()=>{$('#jgNewOv').classList.remove('on');jgStartNew();};
+$('#jgNewYes').onclick=()=>{const o=$('#jgNewOv');o.classList.remove('on');if(o.dataset.m==='entry'){jgNewOk=true;jgEnter();}else jgStartNew();};
 // 画面を離れたら時間を止めて保存する
 document.addEventListener('visibilitychange',()=>{
   if(!playing)return;
@@ -1713,8 +1722,14 @@ window.JG_READY=true;
 document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');renderJgCont();if(window.SD_READY)renderSdCont();};});
 // 読み込めていない写真では遊べない(読み直しを試す)
 function picNotReady(){const it=curItem();if(!it||!it.wait)return false;toast('catNotReady',3200);return true;}
-$('#gJigBtn').onclick=()=>{ensureAudio();if(picNotReady())return;renderSel();show('start');$('#start').scrollTop=0;};
-$('#sdCard').onclick=()=>{ensureAudio();sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;};
+// 途中のパズルがあるときは、設定画面に入る前に「続きを遊ぶ/新しく始める」を聞く(2026-11-18)。
+// ここで「新しく始める」を選んだら、設定画面の「始める」ではもう聞かない(jgNewOk・sdNewOk)
+let jgNewOk=false,sdNewOk=false;
+function newAsk(ov,h,pp,entry,q,p){const o=$(ov);o.dataset.m=entry?'entry':'';$(h).dataset.t=q;$(h).textContent=t(q);$(pp).dataset.t=p;$(pp).textContent=t(p);o.classList.add('on');}
+function jgEnter(){renderSel();show('start');$('#start').scrollTop=0;}
+function sdEnter(){sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;}
+$('#gJigBtn').onclick=()=>{ensureAudio();if(picNotReady())return;jgNewOk=false;if(jgContData){newAsk('#jgNewOv','#jgNewH','#jgNewPp',true,'jgEntQ','jgEntP');return;}jgEnter();};
+$('#sdCard').onclick=()=>{ensureAudio();sdNewOk=false;if(sdLoad()){sdPending=null;newAsk('#sdNewOv','#sdNewH','#sdNewPp',true,'sdEntQ','sdEntP');return;}sdEnter();};
 // 「続きから」があるときは「新しく始める」の見出しを出す
 function renderMenuNew(){$('#menuHNew').style.display=$('#jgCont').style.display!=='none'||$('#sdCont').style.display!=='none'?'':'none';}
 let toastT=null;
@@ -1926,8 +1941,8 @@ function sdRenderRecs(){
 // 記録のある問題を最初から遊ぶ(途中の問題があれば確認)
 function sdStartRec(id){
   if(sdMode()==='wait'){toast('catLoading',2600);return;}
-  if(sdLoad()){sdPending=()=>sdPlayRec(id);$('#sdNewOv').classList.add('on');}
-  else sdPlayRec(id);
+  if(sdLoad()&&!sdNewOk){sdPending=()=>sdPlayRec(id);newAsk('#sdNewOv','#sdNewH','#sdNewPp',false,'sdNewQ','sdNewP');}
+  else{sdNewOk=false;sdPlayRec(id);}
 }
 function sdPlayRec(id){
   const r=sdRecsLoad().find(x=>x.id===id);if(!r){sdRenderStart();return;}
@@ -2189,11 +2204,11 @@ function sdApplyLang(){
   sdRenderDone();sdNewCatPaint();
 }
 $('#sdCont').onclick=()=>{ensureAudio();sdContinue();};
-$('#sdGo').onclick=()=>{ensureAudio();if(sdMode()==='wait'){toast('catLoading',2600);return;}if(sdLoad()){sdPending=null;$('#sdNewOv').classList.add('on');}else sdNew(sdSelLv);};
+$('#sdGo').onclick=()=>{ensureAudio();if(sdMode()==='wait'){toast('catLoading',2600);return;}if(sdLoad()&&!sdNewOk){sdPending=null;newAsk('#sdNewOv','#sdNewH','#sdNewPp',false,'sdNewQ','sdNewP');}else{sdNewOk=false;sdNew(sdSelLv);}};
 $('#sdPicBtn').onclick=sdShowPic;
 $('#sdNewOv').onclick=e=>{if(e.target.id==='sdNewOv'){sdPending=null;$('#sdNewOv').classList.remove('on');}};
 $('#sdNewNo').onclick=()=>{sdPending=null;$('#sdNewOv').classList.remove('on');sdContinue();};
-$('#sdNewYes').onclick=()=>{$('#sdNewOv').classList.remove('on');const f=sdPending;sdPending=null;if(f)f();else sdNew(sdSelLv);};
+$('#sdNewYes').onclick=()=>{const o=$('#sdNewOv');o.classList.remove('on');if(o.dataset.m==='entry'){sdPending=null;sdNewOk=true;sdEnter();return;}const f=sdPending;sdPending=null;if(f)f();else sdNew(sdSelLv);};
 $('#sdRetryBtn').onclick=()=>{$('#sdDoneOv').classList.remove('on');if(sdDoneRec)sdPlayRec(sdDoneRec.id);};
 $('#sdFavBtn').onclick=()=>{if(sdDoneRec&&sdToggleFav(sdDoneRec.id))sdRenderDone();};
 // 戻る:途中は自動で保存されるので、確認なしで戻る(次は「続きから」で再開)
