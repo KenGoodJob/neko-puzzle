@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261119043311';
+const APP_VERSION='20261119051725';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -2427,9 +2427,9 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now(
 
 /* ====== 神経衰弱(猫の写真のペア合わせ。2026-11-19) ====== */
 // カードは 6・12・16枚(3・6・8組)。絵は出た猫からランダム、足りなければイラストで補う。
-// 2枚がそろわなかったら約2秒で裏に戻る(タップするとすぐ戻る)。途中は自動で保存(localStorage 'neko-mm-save')。
+// 2枚がそろわなかったら約3秒で裏に戻る(タップするとすぐ戻る)。途中は自動で保存(localStorage 'neko-mm-save')。
 // クリアすると、その日だけナンプレでもう1枚新しい猫を出せる(1日1回まで。mmBonus)
-const MM_KEY='neko-mm-save',MM_RECS='neko-mm-recs',MM_NS=[6,12,16],MM_BACK_MS=2000;
+const MM_KEY='neko-mm-save',MM_RECS='neko-mm-recs',MM_NS=[6,12,16],MM_BACK_MS=3000;
 let mm=null,mmSelN=12,mmBusy=null,mmT0=0,mmTimer=null,mmPlaying=false,mmLastSec=null,mmLastMv=0,mmNewOk=false,mmGen=0,mmCards=[];
 try{const v=Number(localStorage.getItem('neko-mm-n'));if(MM_NS.includes(v))mmSelN=v;}catch(e){}
 const mmElapsed=()=>mm?mm.el+(mmT0?(Date.now()-mmT0)/1000:0):0;
