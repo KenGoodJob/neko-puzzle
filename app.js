@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261119040753';
+const APP_VERSION='20261119043311';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -14,6 +14,31 @@ const T={
   sdCardT:['🔢 ナンプレで新しい猫を出す','🔢 ナンプレで あたらしい ねこを だす'],
   sdcLimit:['今日の新しい猫はおしまい(明日また出ます)','きょうの あたらしい ねこは おしまい(あした また でます)'],
   sdcNone:['新しい猫は準備中です','あたらしい ねこは じゅんびちゅう です'],
+  sdcLimitMm:['今日の新しい猫はおしまい(神経衰弱をクリアすると、もう1枚出せます)','きょうの あたらしい ねこは おしまい(しんけいすいじゃくを クリアすると、もう 1まい だせます)'],
+  sdmLimitMm:['今日の新しい猫はおしまいです。神経衰弱をクリアすると、もう1枚出せます。今は出た猫の中から1匹で遊びます','きょうの あたらしい ねこは おしまい です。しんけいすいじゃくを クリアすると、もう 1まい だせます。いまは でた ねこの なかから 1ぴきで あそびます'],
+  // 神経衰弱
+  gMm:['神経衰弱','しんけいすいじゃく'],
+  mmCardT:['🃏 神経衰弱','🃏 しんけいすいじゃく'],
+  mmcGet:['クリアすると、ナンプレで今日もう1枚、新しい猫が出せます','クリアすると、ナンプレで きょう もう 1まい、あたらしい ねこが だせます'],
+  mmcGot:['今日のぶんはもらいました(明日またもらえます)','きょうの ぶんは もらいました(あした また もらえます)'],
+  mmcNone:['出た猫の写真で遊びます','でた ねこの しゃしんで あそびます'],
+  mmRule:['カードを2枚ずつめくって、同じ絵をそろえます','カードを 2まいずつ めくって、おなじ えを そろえます'],
+  mmmGet:['クリアすると、ナンプレで今日もう1枚、新しい猫を出せるようになります(1日1回まで)','クリアすると、ナンプレで きょう もう 1まい、あたらしい ねこを だせるように なります(1にち 1かい まで)'],
+  mmmGot:['今日のぶんはもらいました。クリアしても、今日はもう増えません(明日またもらえます)','きょうの ぶんは もらいました。クリアしても、きょうは もう ふえません(あした また もらえます)'],
+  mmmNone:['新しい猫は準備中です。出た猫の写真で遊びます','あたらしい ねこは じゅんびちゅう です。でた ねこの しゃしんで あそびます'],
+  mmHCnt:['カードの枚数','カードの まいすう'],
+  m6:['かんたん','かんたん'],m12:['ふつう','ふつう'],m16:['むずかしい','むずかしい'],
+  mmNoPic:['絵が足りません','えが たりません'],
+  mmGot1:['そろった','そろった'],mmMv1:['めくった','めくった'],mmMv2:['回','かい'],
+  mmQuitQ:['神経衰弱をやめますか?','しんけいすいじゃくを やめますか?'],
+  mmEntQ:['途中の神経衰弱があります','とちゅうの しんけいすいじゃくが あります'],
+  mmEntP:['新しく始めると、途中の神経衰弱は消えます','あたらしく はじめると、とちゅうの しんけいすいじゃくは きえます'],
+  mmNewP:['途中の神経衰弱は消えます','とちゅうの しんけいすいじゃくは きえます'],
+  mmDone:['そろいました!','そろいました!'],
+  mmGift:['🐱 ナンプレで、今日もう1枚 新しい猫を出せるようになりました','🐱 ナンプレで、きょう もう 1まい あたらしい ねこを だせるように なりました'],
+  mmAgain:['もう一度','もういちど'],mmOther:['枚数を変える','まいすうを かえる'],
+  testMm:['🛠 全部そろえる(テスト用)','🛠 ぜんぶ そろえる(テストよう)'],
+  admBonus:['神経衰弱のぶん(今日)','しんけいすいじゃくの ぶん(きょう)'],admBonusY:['もらった','もらった'],admBonusN:['まだ','まだ'],
   sdmNew:['解くと、新しい猫が出てきます。3×3の9マスを埋めて「🐱 絵を見る」を押すと、少しずつ見えてきます','とくと、あたらしい ねこが でてきます。3×3の 9マスを うめて「🐱 えを みる」を おすと、すこしずつ みえてきます'],
   sdmLimit:['今日の新しい猫はおしまいです。出た猫の中から1匹で遊びます(明日また新しい猫が出ます)','きょうの あたらしい ねこは おしまい です。でた ねこの なかから 1ぴきで あそびます(あした また あたらしい ねこが でます)'],
   sdmNone:['新しい猫は準備中です。出た猫の中から1匹で遊びます','あたらしい ねこは じゅんびちゅう です。でた ねこの なかから 1ぴきで あそびます'],
@@ -209,7 +234,7 @@ const T={
   admCBadKey:['キーが正しくないようです','キーが ただしく ない ようです'],admCNg:['つながりません','つながりません'],admCOk:['つながりました','つながりました'],admDeleted:['消しました','けしました'],
   admBad:['キーの形式が正しくありません','キーの けいしきが ただしく ありません'],
   admSrc:['前回の写真の取得元','ぜんかいの しゃしんの しゅとくもと'],
-  admLim:['新しい猫(1日)','あたらしい ねこ(1にち)'],
+  admLim:['ナンプレの新しい猫(1日)','ナンプレの あたらしい ねこ(1にち)'],
   admUsed:['今日出た新しい猫','きょう でた あたらしい ねこ'],
   admInit:['解放を最初に戻す(テスト用)','かいほうを さいしょに もどす(テストよう)'],
   apvBadSz:['この端末で大きさが合いません','この たんまつで おおきさが あいません'],apvBadFp:['この端末で指紋が合いません','この たんまつで しもんが あいません'],
@@ -240,7 +265,7 @@ const T={
   zoomNoL:['ID','ID'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
-  admInitP:['出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずを 0に もどし、けした しゃしんも もとに もどします'],
+  admInitP:['出た猫を最初の6枚に、今日の数と神経衰弱のぶんを0に戻し、消した写真も元に戻します','でた ねこを さいしょの 6まいに、きょうの かずと しんけいすいじゃくの ぶんを 0に もどし、けした しゃしんも もとに もどします'],
   admInitDone:['最初に戻しました','さいしょに もどしました'],
   admSrcNone:['まだ取得していません','まだ しゅとく していません'],
   admSrcFail:['取得できませんでした(サンプルのみ)','しゅとく できませんでした(サンプルのみ)'],
@@ -408,7 +433,7 @@ function renderPics(){
 /* ====== 猫の写真(許可リスト方式) ====== */
 // 管理者が確認して許可した写真だけを使う。一覧は同じサイトの approved.json(番号・アドレス・写真の中身の指紋 SHA-256)。
 // iPad は一覧の写真をまとめて読み込み、指紋が一致したものだけを iPad 内(IndexedDB 'apv')に保存する(取得元で差し替えられても出さない)。
-// 見せる写真(出た猫)は少しずつ増やす:最初に6枚、ナンプレをクリアするたびに1枚(1日2枚まで。管理用の設定で変更可)。番号の小さい順
+// 見せる写真(出た猫)は少しずつ増やす:最初に6枚、ナンプレをクリアするたびに1枚(1日1枚まで+神経衰弱のクリアで1枚。管理用の設定で変更可)。並び順
 // 候補探し(The Cat API / cataas)は管理用の画面だけで使う
 const CAT_KEY='neko-catapi-key';
 const CAT_KEY_RE=/^[A-Za-z0-9_-]{8,100}$/;
@@ -418,13 +443,21 @@ const CATAAS_IMG_RE=/^https:\/\/cataas\.com\/cat\/[A-Za-z0-9_-]{6,40}$/;
 const APV_URL='approved.json',APV_MAX=60,APV_ADM_MAX=50,APV_FIRST=6,APV_SHOW=6,HASH_RE=/^[0-9a-f]{64}$/;
 const APV_OPEN_KEY='neko-apv-open',APV_BAD_KEY='neko-apv-bad',APV_NEW_KEY='neko-apv-new';
 // 1日に出せる新しい猫(ナンプレのクリアで1枚)。使わなかった分は持ち越さない
-const CAT_LIMIT_KEY='neko-sd-limit',CAT_QUOTA_KEY='neko-sd-quota',CAT_LIMIT_DEF=2,CAT_LIMIT_MAX=50;
-try{localStorage.removeItem('neko-apv-limit');localStorage.removeItem('neko-apv-quota');}catch(e){}
+// 2026-11-19:ナンプレだけで出せるのは1日1枚(初期値)。神経衰弱をクリアすると、その日だけもう1枚(1日1回まで・持ち越さない)
+// 初期値を2枚から1枚に変えたので、保存する名前も変えた(古い 'neko-sd-limit' は消す)
+const CAT_LIMIT_KEY='neko-sd-base',CAT_QUOTA_KEY='neko-sd-quota',CAT_LIMIT_DEF=1,CAT_LIMIT_MAX=50,MM_BONUS_KEY='neko-mm-bonus';
+try{localStorage.removeItem('neko-apv-limit');localStorage.removeItem('neko-apv-quota');localStorage.removeItem('neko-sd-limit');}catch(e){}
 let catShowAll=false,catItems=[],catState='idle',catGen=0,apvPool=[],apvList=null,apvNoSave=false,apvFold=true,apvLast=0;
 let apvStat={list:0,saved:0,bad:0,err:''};
 function catKey(){try{const k=localStorage.getItem(CAT_KEY)||'';return CAT_KEY_RE.test(k)?k:'';}catch(e){return '';}}
 const jstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
-function catLimit(){
+// 神経衰弱のクリアでもらった今日の1枚ぶん(日本時間の0時で消える)
+function mmBonus(){try{return localStorage.getItem(MM_BONUS_KEY)===jstDay();}catch(e){return false;}}
+function mmBonusSet(){try{localStorage.setItem(MM_BONUS_KEY,jstDay());}catch(e){}}
+function mmBonusReset(){try{localStorage.removeItem(MM_BONUS_KEY);}catch(e){}}
+// 今日出せる新しい猫の数=ナンプレの1日の枚数+神経衰弱のぶん
+function catLimit(){return catBase()+(mmBonus()?1:0);}
+function catBase(){
   try{const v=localStorage.getItem(CAT_LIMIT_KEY);if(v===null)return CAT_LIMIT_DEF;const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=CAT_LIMIT_MAX?n:CAT_LIMIT_DEF;}catch(e){return CAT_LIMIT_DEF;}
 }
 function catUsed(){
@@ -697,8 +730,11 @@ function sdPick(){
 function renderSdCard(){
   const s=$('#sdCardS');if(!s)return;
   const k=kana?'まい':'枚',rest=apvRest().length,left=catLeft();
-  s.textContent=catState!=='ok'?t('catLoading'):rest&&left>0?(kana?'きょうは あと '+left+k+' ・ まだ でていない ねこ '+rest+k:'今日あと'+left+k+' ・ まだ出ていない猫 '+rest+k):rest?t('sdcLimit'):t('sdcNone');
-  const m=sdMode();$('#sdPicMsg').textContent=t(m==='new'?'sdmNew':m==='limit'?'sdmLimit':m==='none'?'sdmNone':m==='illust'?'sdmIllust':'catLoading');
+  // 上限に達しても、神経衰弱のぶんをまだもらっていなければ、そのことを知らせる
+  const bn=!mmBonus();
+  s.textContent=catState!=='ok'?t('catLoading'):rest&&left>0?(kana?'きょうは あと '+left+k+' ・ まだ でていない ねこ '+rest+k:'今日あと'+left+k+' ・ まだ出ていない猫 '+rest+k):rest?t(bn?'sdcLimitMm':'sdcLimit'):t('sdcNone');
+  const m=sdMode();$('#sdPicMsg').textContent=t(m==='new'?'sdmNew':m==='limit'?(bn?'sdmLimitMm':'sdmLimit'):m==='none'?'sdmNone':m==='illust'?'sdmIllust':'catLoading');
+  if(window.MM_READY)renderMmCard();
 }
 // 起動時:保存した写真を出し、許可リストを読み、まだ保存していない写真を読み込む
 // 写真の読み込みの案内(最初の画面の上):一覧を確かめている間は動く棒、新しい写真を読み込む間は「3 / 10枚」と棒
@@ -1228,6 +1264,7 @@ function applyLang(){
   document.querySelectorAll('.lphint,#zoomHint').forEach(e=>{if(e.dataset.k)e.textContent=t(e.dataset.k);});
   renderSel();
   if(window.SD_READY)sdApplyLang();
+  if(window.MM_READY)mmApplyLang();
   if(window.JG_READY)renderJgCont();
   if(window.UPD_READY)renderUpd();
   qRefresh();
@@ -1609,7 +1646,7 @@ function finish(){
 // 利用履歴(遊んだ日時と、どのパズルか)。今は端末内に置くだけ。のちに別端末で見られる仕組みへつなぐ
 const playLog=[];
 function recordPlay(game){
-  const rec={at:new Date().toISOString(),game:game==='sudoku'?'sudoku':'jigsaw'};
+  const rec={at:new Date().toISOString(),game:game==='sudoku'||game==='memory'?game:'jigsaw'};
   playLog.push(rec);
   try{const k='jigsaw-log';let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]');}catch(_){}if(!Array.isArray(a))a=[];a=a.filter(r=>r&&typeof r.at==='string').slice(-500);a.push(rec);localStorage.setItem(k,JSON.stringify(a));}catch(e){}
 }
@@ -1628,11 +1665,11 @@ $('#backBtn').onclick=()=>{
 // 「戻る」の確認(ジグソー・ナンプレ共通の窓。2026-11-18にナンプレも確認するようにした)
 function quitAsk(g,pk){
   const o=$('#quitOv'),h=$('#quitH'),p=$('#quitOv p');o.dataset.g=g;
-  h.dataset.t=g==='sd'?'sdQuitQ':'quitQ';h.textContent=t(h.dataset.t);p.dataset.t=pk;p.textContent=t(pk);o.classList.add('on');
+  h.dataset.t=g==='sd'?'sdQuitQ':g==='mm'?'mmQuitQ':'quitQ';h.textContent=t(h.dataset.t);p.dataset.t=pk;p.textContent=t(pk);o.classList.add('on');
 }
 $('#quitOv').onclick=e=>{if(e.target.id==='quitOv')$('#quitOv').classList.remove('on');};
 $('#quitNo').onclick=()=>$('#quitOv').classList.remove('on');
-$('#quitYes').onclick=()=>{const o=$('#quitOv');o.classList.remove('on');if(o.dataset.g==='sd')sdQuit();else goStart();};
+$('#quitYes').onclick=()=>{const o=$('#quitOv');o.classList.remove('on');if(o.dataset.g==='sd')sdQuit();else if(o.dataset.g==='mm')mmQuit();else goStart();};
 $('#againBtn').onclick=()=>{$('#doneOv').classList.remove('on');newGame(jgItem);};
 $('#otherBtn').onclick=()=>{$('#doneOv').classList.remove('on');goStart();};
 function setTg(btn,on){btn.classList.toggle('on',on);btn.querySelector('b').textContent=on?'あり':'なし';}
@@ -1858,7 +1895,7 @@ window.addEventListener('pagehide',()=>{if(playing)jgSave();});
 window.JG_READY=true;
 
 /* ====== 最初の画面(絵を選ぶ → 遊ぶパズルを選ぶ) ====== */
-document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');renderJgCont();if(window.SD_READY)renderSdCont();};});
+document.querySelectorAll('.mnb').forEach(b=>{b.onclick=()=>{show('menu');renderJgCont();if(window.SD_READY)renderSdCont();if(window.MM_READY)renderMmCont();};});
 // 読み込めていない写真では遊べない(読み直しを試す)
 function picNotReady(){const it=curItem();if(!it||!it.wait)return false;toast('catNotReady',3200);return true;}
 // 途中のパズルがあるときは、設定画面に入る前に「続きを遊ぶ/新しく始める」を聞く(2026-11-18)。
@@ -1870,7 +1907,7 @@ function sdEnter(){sdRenderStart();show('sdStart');$('#sdStart').scrollTop=0;}
 $('#gJigBtn').onclick=()=>{ensureAudio();if(picNotReady())return;jgNewOk=false;if(jgContData){newAsk('#jgNewOv','#jgNewH','#jgNewPp',true,'jgEntQ','jgEntP');return;}jgEnter();};
 $('#sdCard').onclick=()=>{ensureAudio();sdNewOk=false;if(sdLoad()){sdPending=null;newAsk('#sdNewOv','#sdNewH','#sdNewPp',true,'sdEntQ','sdEntP');return;}sdEnter();};
 // 「続きから」があるときは「新しく始める」の見出しを出す
-function renderMenuNew(){$('#menuHNew').style.display=$('#jgCont').style.display!=='none'||$('#sdCont').style.display!=='none'?'':'none';}
+function renderMenuNew(){$('#menuHNew').style.display=['#jgCont','#sdCont','#mmCont'].some(q=>$(q).style.display!=='none')?'':'none';}
 let toastT=null;
 function toast(key,ms){const e=$('#toast');e.textContent=t(key);e.classList.add('on');clearTimeout(toastT);if(ms)toastT=setTimeout(()=>e.classList.remove('on'),ms);}
 function hideToast(){clearTimeout(toastT);$('#toast').classList.remove('on');}
@@ -2385,8 +2422,235 @@ sdApplyLang();
 // 起動時:猫の写真・ごほうびの絵を読み、ジグソーの「続きから」を出す。
 // 保存データを消されにくくするよう頼む(できる端末だけ)。開いた直後は保存場所が開けないことがあるので少し待つ
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}
-setTimeout(()=>{initCats();albLoad();renderJgCont();renderSdCont();},300);
+setTimeout(()=>{initCats();albLoad();renderJgCont();renderSdCont();if(window.MM_READY)renderMmCont();},300);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-apvLast>30*60e3&&!playing&&!sdPlaying)initCats();});
+
+/* ====== 神経衰弱(猫の写真のペア合わせ。2026-11-19) ====== */
+// カードは 6・12・16枚(3・6・8組)。絵は出た猫からランダム、足りなければイラストで補う。
+// 2枚がそろわなかったら約2秒で裏に戻る(タップするとすぐ戻る)。途中は自動で保存(localStorage 'neko-mm-save')。
+// クリアすると、その日だけナンプレでもう1枚新しい猫を出せる(1日1回まで。mmBonus)
+const MM_KEY='neko-mm-save',MM_RECS='neko-mm-recs',MM_NS=[6,12,16],MM_BACK_MS=2000;
+let mm=null,mmSelN=12,mmBusy=null,mmT0=0,mmTimer=null,mmPlaying=false,mmLastSec=null,mmLastMv=0,mmNewOk=false,mmGen=0,mmCards=[];
+try{const v=Number(localStorage.getItem('neko-mm-n'));if(MM_NS.includes(v))mmSelN=v;}catch(e){}
+const mmElapsed=()=>mm?mm.el+(mmT0?(Date.now()-mmT0)/1000:0):0;
+// 絵の記録:猫の写真はアドレス {c:アドレス}、イラストは番号 {i:番号}
+function mmRef(it){if(isCat(it))return {c:it.ou};const i=images.indexOf(it);return i>=0&&i<SAMPLE_N?{i}:null;}
+function mmFromRef(r){
+  if(!r)return null;
+  if(typeof r.c==='string')return catItems.find(o=>o.ou===r.c&&o.url)||null;
+  if(Number.isInteger(r.i)&&r.i>=0&&r.i<SAMPLE_N)return images[r.i];
+  return null;
+}
+function mmRefOk(r){return !!r&&typeof r==='object'&&(catOkUrl(r.c)&&r.i===undefined||Number.isInteger(r.i)&&r.i>=0&&r.i<SAMPLE_N&&r.c===undefined);}
+function mmSave(){
+  if(!mm)return;
+  try{localStorage.setItem(MM_KEY,JSON.stringify({v:1,n:mm.n,cards:mm.cards,pics:mm.pics.map(mmRef),got:mm.got.map(g=>g?1:0),el:Math.floor(mmElapsed()),mv:mm.mv}));}catch(e){}
+}
+// 保存データは形式を確かめてから使う
+function mmLoad(){
+  try{
+    const o=JSON.parse(localStorage.getItem(MM_KEY)||'null');
+    if(!o||o.v!==1||!MM_NS.includes(o.n))return null;
+    const k=o.n/2;
+    if(!Array.isArray(o.cards)||o.cards.length!==o.n||!o.cards.every(x=>Number.isInteger(x)&&x>=0&&x<k))return null;
+    for(let p=0;p<k;p++)if(o.cards.filter(x=>x===p).length!==2)return null;
+    if(!Array.isArray(o.pics)||o.pics.length!==k||!o.pics.every(mmRefOk))return null;
+    if(!Array.isArray(o.got)||o.got.length!==o.n||!o.got.every(g=>g===0||g===1))return null;
+    for(let i=0;i<o.n;i++)if(o.got[i]!==o.got[o.cards.indexOf(o.cards[i])]||o.got[i]!==o.got[o.cards.lastIndexOf(o.cards[i])])return null;
+    if(o.got.every(g=>g))return null;
+    if(!Number.isFinite(o.el)||o.el<0||!Number.isInteger(o.mv)||o.mv<0||o.mv>100000)return null;
+    return {n:o.n,cards:o.cards.slice(),refs:o.pics.map(r=>r.c!==undefined?{c:r.c}:{i:r.i}),got:o.got.map(g=>g===1),el:Math.min(o.el,360000),mv:o.mv};
+  }catch(e){return null;}
+}
+function mmClearSave(){try{localStorage.removeItem(MM_KEY);}catch(e){}}
+// 記録:枚数ごとのいちばん速い時間(秒)
+function mmRecs(){try{const o=JSON.parse(localStorage.getItem(MM_RECS)||'null');const b={};if(o&&o.v===1&&o.b&&typeof o.b==='object')MM_NS.forEach(n=>{const v=o.b[n];if(Number.isInteger(v)&&v>=0&&v<360000)b[n]=v;});return b;}catch(e){return {};}}
+function mmRecsSave(b){try{localStorage.setItem(MM_RECS,JSON.stringify({v:1,b}));}catch(e){}}
+// 使える絵の候補(出た猫を先にランダムに、そのあとイラスト)
+function mmCands(){return shuffle(catItems.filter(o=>o&&o.url)).concat(shuffle(images.slice(0,SAMPLE_N)));}
+const mmCanN=n=>catItems.filter(o=>o&&o.url).length+SAMPLE_N>=n/2;
+// 読み込めた絵を k 枚そろえる(want に入っている絵を優先し、読めない絵は候補で置き換える)。足りなければ null
+async function mmFill(want,k){
+  const cands=mmCands(),out=Array(k).fill(null),used=new Set();
+  const okP=o=>Promise.race([Promise.resolve(o.ready).then(()=>true,()=>false),sleep(30000).then(()=>false)]);
+  let todo=[];for(let i=0;i<k;i++){const o=want[i];if(o&&!used.has(o)){used.add(o);todo.push([i,o]);}}
+  let ci=0;
+  for(let round=0;round<20;round++){
+    const rs=await Promise.all(todo.map(([,o])=>okP(o)));
+    todo.forEach(([i,o],j)=>{if(rs[j])out[i]=o;});
+    const empty=[];for(let i=0;i<k;i++)if(!out[i])empty.push(i);
+    if(!empty.length)return out;
+    todo=[];
+    for(const i of empty){while(ci<cands.length&&used.has(cands[ci]))ci++;if(ci>=cands.length)break;used.add(cands[ci]);todo.push([i,cands[ci++]]);}
+    if(!todo.length)return null;
+  }
+  return null;
+}
+// 0.3秒以上かかるときは「写真を読み込んでいます」の窓
+async function mmFillWait(want,k){
+  const ov=$('#picWaitOv'),tm=setTimeout(()=>ov.classList.add('on'),300);
+  try{return await mmFill(want,k);}finally{clearTimeout(tm);ov.classList.remove('on');}
+}
+// 開始画面
+function mmRenderStart(){
+  const box=$('#mmCnts');box.replaceChildren();
+  if(!mmCanN(mmSelN)){const ok=MM_NS.filter(mmCanN);if(ok.length)mmSelN=ok[ok.length-1];}
+  MM_NS.forEach(n=>{
+    const can=mmCanN(n),b=document.createElement('button');b.className='cnt'+(n===mmSelN&&can?' sel':'');b.disabled=!can;
+    b.append(document.createTextNode(n+(kana?'まい':'枚')),mk('small',null,can?(kana?(n/2)+'くみ・':(n/2)+'組・')+t('m'+n):t('mmNoPic')));
+    b.onclick=()=>{mmSelN=n;try{localStorage.setItem('neko-mm-n',String(n));}catch(e){}mmRenderStart();};
+    box.appendChild(b);
+  });
+  renderMmCard();
+}
+// 最初の画面のカード・開始画面の案内(神経衰弱のぶんをもらえるか)
+function renderMmCard(){
+  const s=$('#mmCardS'),m=$('#mmMsg');if(!s||!m)return;
+  const rest=catState==='ok'&&apvRest().length>0,got=mmBonus();
+  s.textContent=catState!=='ok'?t('catLoading'):!rest?t('mmcNone'):got?t('mmcGot'):t('mmcGet');
+  m.textContent=catState!=='ok'?t('catLoading'):!rest?t('mmmNone'):got?t('mmmGot'):t('mmmGet');
+  m.style.display='';
+}
+// 盤:横向きは横長、縦向きは縦長に並べる。カードは正方形
+function mmLayout(){
+  if(!mm)return;
+  const a=$('#mmArea'),W=a.clientWidth,H=a.clientHeight,land=W>=H,pad=18,gap=W<700?10:14;
+  const [c,r]=mm.n===6?(land?[3,2]:[2,3]):mm.n===12?(land?[4,3]:[3,4]):[4,4];
+  const k=Math.floor(Math.max(60,Math.min(300,(W-pad*2-gap*(c-1))/c,(H-pad*2-gap*(r-1))/r)));
+  const g=$('#mmGrid');g.style.gap=gap+'px';g.style.gridTemplateColumns='repeat('+c+','+k+'px)';g.style.gridAutoRows=k+'px';g.style.setProperty('--k',k+'px');
+}
+function mmBuild(){
+  const g=$('#mmGrid');g.replaceChildren();mmCards=[];
+  mm.cards.forEach((p,i)=>{
+    const b=document.createElement('button');b.className='mmk';
+    const inn=mk('span','mmIn'),bk=mk('span','mmB'),fr=mk('span','mmF'),im=mk('img');
+    bk.appendChild(mk('span',null,'🐾'));im.alt='';im.draggable=false;im.src=safeImgUrl(mm.pics[p].url);
+    fr.append(im,mk('span','mmOk','✓'));inn.append(bk,fr);b.appendChild(inn);
+    b.onclick=()=>mmTap(i);
+    g.appendChild(b);mmCards.push(b);
+  });
+  mmDraw();
+}
+function mmDraw(){
+  mmCards.forEach((b,i)=>{b.classList.toggle('up',mm.got[i]||mm.up.includes(i));b.classList.toggle('got',mm.got[i]);});
+  $('#mmGot').textContent=mm.got.filter(x=>x).length/2;$('#mmGotN').textContent='/ '+mm.n/2+' '+(kana?'くみ':'組');
+  $('#mmMv').textContent=mm.mv;
+}
+// そろわなかった2枚を裏に戻す
+function mmBackNow(){if(!mmBusy)return;clearTimeout(mmBusy);mmBusy=null;mm.up=[];mmDraw();}
+function mmTap(i){
+  if(!mmPlaying||!mm)return;
+  if(mmBusy){mmBackNow();return;} // そろわなかった2枚が出ているときは、どこをタップしても裏に戻すだけ
+  if(mm.got[i]||mm.up.includes(i))return;
+  mm.up.push(i);tone(660,0,.12,.08);
+  if(mm.up.length<2){mmDraw();return;}
+  mm.mv++;
+  const [a,b]=mm.up;
+  if(mm.cards[a]===mm.cards[b]){
+    mm.got[a]=mm.got[b]=true;mm.up=[];mmDraw();
+    setTimeout(()=>{tone(880,0,.2);tone(1320,.08,.3,.1);},300);
+    mmSave();
+    if(mm.got.every(x=>x))mmFinish();
+  }else{
+    mmDraw();mmSave();
+    setTimeout(()=>{if(mmBusy)tone(330,0,.25,.06);},450);
+    mmBusy=setTimeout(()=>{mmBusy=null;if(mm){mm.up=[];mmDraw();}},MM_BACK_MS);
+  }
+}
+function mmTick(){$('#mmTime').textContent=fmt(Math.floor(mmElapsed()));}
+function mmPause(){if(mm&&mmT0){mm.el=mmElapsed();mmT0=0;}clearInterval(mmTimer);mmSave();}
+function mmResume(){mmT0=Date.now();clearInterval(mmTimer);let n=0;mmTimer=setInterval(()=>{mmTick();if(++n%10===0)mmSave();},1000);mmTick();}
+function mmBegin(){
+  if(mmBusy){clearTimeout(mmBusy);mmBusy=null;}
+  mmPlaying=true;mmLastSec=null;show('mmPlay');
+  requestAnimationFrame(()=>{mmLayout();mmBuild();mmResume();mmSave();});
+}
+async function mmNew(n){
+  if(catState!=='ok'){toast('catLoading',2600);return;}
+  if(!mmCanN(n)){toast('mmNoPic',2600);return;}
+  const gen=++mmGen,k=n/2;
+  const pics=await mmFillWait([],k);if(gen!==mmGen)return;
+  if(!pics){toast('picNg',3500);return;}
+  const cards=shuffle([...Array(n).keys()].map(i=>i%k));
+  mmClearSave();
+  mm={n,cards,pics,got:Array(n).fill(false),up:[],el:0,mv:0};
+  mmBegin();
+}
+// 続きから:保存した絵で遊ぶ(消した猫・読めない写真は、別の絵に置き換える)
+async function mmContinue(){
+  const s=mmLoad();if(!s){renderMmCont();return;}
+  if(catState!=='ok'){toast('catLoading',2600);return;}
+  const gen=++mmGen,k=s.n/2;
+  const pics=await mmFillWait(s.refs.map(mmFromRef),k);if(gen!==mmGen)return;
+  if(!pics){toast('picNg',3500);return;} // 読めないときは続きを消さない
+  mm={n:s.n,cards:s.cards,pics,got:s.got,up:[],el:s.el,mv:s.mv};
+  mmBegin();
+}
+function mmFinish(){
+  mmPlaying=false;const sec=Math.floor(mmElapsed());mmT0=0;clearInterval(mmTimer);
+  mmClearSave();recordPlay('memory');
+  // 新記録
+  const b=mmRecs(),prev=b[mm.n],nr=prev!==undefined&&sec<prev;
+  if(prev===undefined||sec<prev){b[mm.n]=sec;mmRecsSave(b);}
+  // 神経衰弱のぶん(1日1回まで)。まだ出ていない猫があるときだけ知らせる
+  const first=!mmBonus();if(first)mmBonusSet();
+  const gift=first&&catState==='ok'&&apvRest().length>0;
+  mmLastSec=sec;mmLastMv=mm.mv;mmDonePaint(prev,nr);
+  $('#mmGift').style.display=gift?'':'none';
+  renderCatPics();
+  setTimeout(sndDone,500);
+  if(gift)[784,988,1175].forEach((f,i)=>tone(f,1.6+i*.14,.35,.12));
+  if(nr)[1047,1319,1568,2093].forEach((f,i)=>tone(f,1.0+i*.12,.5,.14));
+  setTimeout(()=>{if(!mmPlaying&&$('#mmPlay').classList.contains('on'))$('#mmDoneOv').classList.add('on');},1500);
+}
+let mmDonePrev,mmDoneNr=false;
+function mmDonePaint(prev,nr){
+  if(prev!==undefined||nr!==undefined){mmDonePrev=prev;mmDoneNr=!!nr;}
+  if(mmLastSec==null)return;
+  const sec=mmLastSec,mm2=Math.floor(sec/60),ss=sec%60;
+  $('#mmDoneMsg').textContent=kana?`よくできました。かかった じかんは ${mm2?mm2+fun(mm2)+' ':''}${ss}びょう、めくった かいすうは ${mmLastMv}かい です`
+    :`よくできました。かかった時間は${mm2?mm2+'分':''}${ss}秒、めくった回数は${mmLastMv}回です`;
+  $('#mmNewRec').style.display=mmDoneNr?'':'none';
+  $('#mmRecInfo').textContent=mmDonePrev===undefined?t('sdFirst'):t(mmDoneNr?'sdPrev':'sdBest')+' '+fmt(mmDoneNr?mmDonePrev:mmDonePrev);
+}
+// 最初の画面の「続きから」
+function renderMmCont(){
+  const sv=mmLoad(),cb=$('#mmCont');
+  if(!sv){cb.style.display='none';cb.replaceChildren();renderMenuNew();return;}
+  const tx=mk('span','ctx'),un=kana?'まい':'枚',kn=kana?'くみ':'組';
+  tx.append(mk('span','ct',t('sdCont')),mk('small',null,'🃏 '+t('gMm')+' ・ '+sv.n+un+' ・ '+t('mmGot1')+' '+sv.got.filter(x=>x).length/2+' / '+sv.n/2+kn+' ・ ⏱ '+fmt(Math.floor(sv.el))));
+  cb.replaceChildren(mk('span','qm mmq','🐾'),tx);cb.style.display='';renderMenuNew();
+}
+function mmEnter(){mmRenderStart();show('mmStart');$('#mmStart').scrollTop=0;}
+function mmQuit(){if(mmBusy)mmBackNow();if(mmPlaying)mmPause();mmPlaying=false;mmGen++;show('menu');renderMmCont();}
+function mmApplyLang(){
+  if($('#mmStart').classList.contains('on'))mmRenderStart();else renderMmCard();
+  renderMmCont();if(mm&&mmCards.length)mmDraw();mmDonePaint();
+}
+$('#mmCard').onclick=()=>{ensureAudio();mmNewOk=false;if(mmLoad()){newAsk('#mmNewOv','#mmNewH','#mmNewPp',true,'mmEntQ','mmEntP');return;}mmEnter();};
+$('#mmCont').onclick=()=>{ensureAudio();mmContinue();};
+$('#mmGo').onclick=()=>{ensureAudio();if(catState!=='ok'){toast('catLoading',2600);return;}if(mmLoad()&&!mmNewOk){newAsk('#mmNewOv','#mmNewH','#mmNewPp',false,'jgNewQ','mmNewP');return;}mmNewOk=false;mmNew(mmSelN);};
+$('#mmNewOv').onclick=e=>{if(e.target.id==='mmNewOv')$('#mmNewOv').classList.remove('on');};
+$('#mmNewNo').onclick=()=>{$('#mmNewOv').classList.remove('on');mmContinue();};
+$('#mmNewYes').onclick=()=>{const o=$('#mmNewOv');o.classList.remove('on');if(o.dataset.m==='entry'){mmNewOk=true;mmEnter();}else{mmNewOk=false;mmNew(mmSelN);}};
+$('#mmBackBtn').onclick=()=>{if(!mmPlaying){mmQuit();return;}quitAsk('mm','quitP');};
+$('#mmSetBtn').onclick=()=>{setTg($('#mmSoundBtn'),soundOn);$('#mmSetOv').classList.add('on');};
+$('#mmSetClose').onclick=()=>$('#mmSetOv').classList.remove('on');
+$('#mmSoundBtn').onclick=e=>{soundOn=!soundOn;ensureAudio();setTg(e.currentTarget,soundOn);};
+$('#mmTestFill').onclick=()=>{$('#mmSetOv').classList.remove('on');if(!mmPlaying||!mm)return;if(mmBusy)mmBackNow();mm.got=mm.got.map(()=>true);mm.up=[];mmDraw();mmFinish();};
+$('#mmAgainBtn').onclick=()=>{$('#mmDoneOv').classList.remove('on');mmNew(mm?mm.n:mmSelN);};
+$('#mmOtherBtn').onclick=()=>{$('#mmDoneOv').classList.remove('on');mmEnter();};
+$('#mmHomeBtn').onclick=()=>{$('#mmDoneOv').classList.remove('on');hideToast();show('menu');renderMmCont();};
+window.addEventListener('resize',()=>{if($('#mmPlay').classList.contains('on'))mmLayout();});
+// 画面を離れたら時間を止めて保存する
+document.addEventListener('visibilitychange',()=>{
+  if(!mmPlaying)return;
+  if(document.hidden)mmPause();
+  else if($('#mmPlay').classList.contains('on'))mmResume();
+});
+window.addEventListener('pagehide',()=>{if(mmPlaying)mmSave();});
+window.MM_READY=true;
+mmApplyLang();
 
 /* ====== 管理用の設定(メニューの版番号を3秒長押しで開く) ====== */
 // キーは画面・ログに出さない(入力欄は伏せ字、設定済みかどうかだけ表示)
@@ -2413,8 +2677,8 @@ function admRender(msgKey){
   const k=kana?'まい':'枚';
   $('#admSrc').textContent=t('admApvSt')+':'+(kana?'いちらん ':'一覧')+apvStat.list+k+(kana?'・ほぞん ':'・保存')+apvPool.length+k+(kana?'・みられる ':'・見られる')+catItems.length+k+(kana?'・のこり ':'・残り')+apvRest().length+k
     +(apvStat.bad?'・❗'+(kana?'しょうごうが あわない ':'照合が合わない')+apvStat.bad+k+apvBadNos():'')+(apvStat.err?' ('+apvStat.err+')':'');
-  $('#admLimV').textContent=catLimit()+k;
-  $('#admUsed').textContent=t('admUsed')+':'+catUsed()+k;
+  $('#admLimV').textContent=catBase()+k;
+  $('#admUsed').textContent=t('admUsed')+':'+catUsed()+k+' ・ '+t('admBonus')+':'+t(mmBonus()?'admBonusY':'admBonusN');
   $('#admDb').textContent=t('admDb')+':'+(idbDiag.ok?t('admDbOk'):t('admDbNg'))+(idbDiag.fails?(kana?'(ひらけなかった かいすう '+idbDiag.fails+' '+idbDiag.last+')':'(開けなかった回数 '+idbDiag.fails+' '+idbDiag.last+')'):'')
     +' ・ '+(kana?'ごほうび '+albItems.length+'まい':'ごほうび'+albItems.length+'枚')+(apvNoSave?(kana?'・しゃしんは ほぞん していません':'・写真は保存していません'):'');
   setTg($('#admTest'),testOn());
@@ -2438,19 +2702,19 @@ function admOpen(){
 }
 function admAfterChange(){renderCatPics();}
 function admSetLimit(d){
-  const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catLimit()+d));
+  const n=Math.max(0,Math.min(CAT_LIMIT_MAX,catBase()+d));
   try{localStorage.setItem(CAT_LIMIT_KEY,String(n));}catch(e){}
   admRender('');renderCatPics();
 }
 $('#admLimDn').onclick=()=>admSetLimit(-1);
 $('#admLimUp').onclick=()=>admSetLimit(1);
-$('#admReset').onclick=()=>{catUseReset();admRender('');renderCatPics();};
+$('#admReset').onclick=()=>{catUseReset();mmBonusReset();admRender('');renderCatPics();};
 // テスト用:出た猫を最初の6枚に・今日の数を0に・消した写真を元に戻す(2回押す)
 let admInitAt=0;
 $('#admInit').onclick=()=>{
   if(Date.now()-admInitAt>4000){admInitAt=Date.now();$('#admInit').textContent=t('admInit2');return;}
   admInitAt=0;
-  try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,CAT_NG_KEY,CAT_GIFT_KEY,CAT_FAV_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
+  try{[APV_OPEN_KEY,APV_NEW_KEY,CAT_QUOTA_KEY,MM_BONUS_KEY,CAT_NG_KEY,CAT_GIFT_KEY,CAT_FAV_KEY].forEach(k=>localStorage.removeItem(k));}catch(e){}
   selApi=-1;apvKeepPrune();apvRebuild();apvTopUp();renderAllPics();renderSel();admRender('admInitDone');
 };
 $('#admSave').onclick=()=>{
@@ -2493,7 +2757,7 @@ $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv'
 // テスト用のボタン(ナンプレの「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
 function testOn(){try{return localStorage.getItem('neko-test')==='1';}catch(e){return false;}}
-function renderTest(){const on=testOn();$('#sdTestFill').style.display=on?'':'none';$('#jgTestFill').style.display=on?'':'none';if(typeof renderCatPics==='function')renderCatPics();}
+function renderTest(){const on=testOn();$('#sdTestFill').style.display=on?'':'none';$('#mmTestFill').style.display=on?'':'none';$('#jgTestFill').style.display=on?'':'none';if(typeof renderCatPics==='function')renderCatPics();}
 $('#admTest').onclick=()=>{try{if(testOn())localStorage.removeItem(TEST_KEY);else localStorage.setItem(TEST_KEY,'1');}catch(e){}renderTest();admRender('');};
 $('#sdTestFill').onclick=()=>{
   $('#sdSetOv').classList.remove('on');

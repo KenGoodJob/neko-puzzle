@@ -15,7 +15,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
 .screen{position:absolute;inset:0;display:none;flex-direction:column}
 .screen.on{display:flex}
-#start,#sdStart,.mscroll{overflow-y:auto;padding:24px 28px 50px;align-items:center;-webkit-overflow-scrolling:touch}
+#start,#sdStart,#mmStart,.mscroll{overflow-y:auto;padding:24px 28px 50px;align-items:center;-webkit-overflow-scrolling:touch}
 /* 最初の画面:上は絵を選ぶ(スクロール)、下に「選んだ絵」と遊ぶパズルのボタンをいつも出す */
 .mscroll{flex:1;display:flex;flex-direction:column;overscroll-behavior:contain}
 .mfoot{flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:12px 24px;padding-bottom:max(12px,env(safe-area-inset-bottom));background:#fff;border-top:3px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.06);justify-content:center}
@@ -433,6 +433,31 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
 #sdDoneOv .dlg p{margin:4px 0 16px}
 #sdHomeBtn{display:block;margin:12px auto 0}
 @media (max-height:860px){#sdDoneOv .newrec{font-size:38px}#sdRetryBtn{min-height:76px;margin-bottom:12px}#sdDoneOv .tg{min-height:66px;margin-bottom:12px}#sdDoneOv .bb{min-height:72px}}
+/* ====== 神経衰弱 ====== */
+.cont.mmc{background:#EAF4FF;border-color:#4A8CD0;box-shadow:0 5px 0 #2D6AA8}
+.cont.mmc:active{box-shadow:0 1px 0 #2D6AA8}
+.cont.mmc .ct{color:#1F5A94}
+.cont.jg .qm.mmq{width:96px;height:96px;background:#6FA8E0;font-size:52px;text-shadow:none}
+.cont.mmc .qm.mmq{width:104px;height:104px;font-size:56px}
+.mmRule{font-size:24px;color:var(--ink);margin:6px 0 0;text-align:center}
+.cnt:disabled{opacity:.4}
+#mmArea{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+#mmGrid{display:grid;gap:14px}
+.mmk{position:relative;padding:0;border:none;background:none;perspective:1000px;-webkit-perspective:1000px}
+.mmIn{position:absolute;inset:0;transition:transform .45s ease;transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
+.mmk.up .mmIn{transform:rotateY(180deg)}
+.mmF,.mmB{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.mmB{background-color:var(--pri);border:6px solid #fff;display:flex;align-items:center;justify-content:center;background-image:radial-gradient(circle at 25% 25%,rgba(255,255,255,.18) 0 12%,transparent 13%),radial-gradient(circle at 75% 75%,rgba(255,255,255,.18) 0 12%,transparent 13%)}
+.mmB span{font-size:calc(var(--k) * .36);line-height:1}
+.mmF{transform:rotateY(180deg);background:#fff;border:6px solid #fff}
+.mmF img{width:100%;height:100%;object-fit:cover;display:block;border-radius:12px;background:#eee;pointer-events:none}
+.mmk.got .mmF{border-color:#3FA34D}
+.mmk .mmOk{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:50%;background:#3FA34D;color:#fff;font-size:26px;font-weight:bold;display:none;align-items:center;justify-content:center;z-index:2}
+.mmk.got .mmOk{display:flex}
+#mmDoneOv .dlg{padding-top:22px;padding-bottom:22px}
+#mmDoneOv .dlg h3{margin:0 0 4px}
+#mmDoneOv .dlg p{margin:4px 0 16px}
+.kana .mmRule{word-break:keep-all;overflow-wrap:anywhere}
 #sdCat{width:min(260px,55vw,22vh,max(120px,calc(100vh - 690px)));aspect-ratio:1/1;border-radius:20px;border:6px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.2);display:block;margin:0 auto 10px;object-fit:cover}
 </style>
 </head>
@@ -447,8 +472,10 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="dlBox" id="dlBox" hidden><p class="dlMsg" id="dlMsg"></p><div class="dlBar"><div id="dlBarIn"></div></div><p class="dlSub" id="dlSub"></p></div>
   <button class="cont jg" id="jgCont" style="display:none"></button>
   <button class="cont jg" id="sdCont" style="display:none"></button>
+  <button class="cont jg" id="mmCont" style="display:none"></button>
   <h2 class="new" id="menuHNew" style="display:none" data-t="jgHNew">新しく始める</h2>
   <button class="cont jg sdc" id="sdCard"><span class="qm">?</span><span class="ctx"><span class="ct" data-t="sdCardT">🔢 ナンプレで新しい猫を出す</span><small id="sdCardS"></small></span></button>
+  <button class="cont jg sdc mmc" id="mmCard"><span class="qm mmq">🐾</span><span class="ctx"><span class="ct" data-t="mmCardT">🃏 神経衰弱</span><small id="mmCardS"></small></span></button>
   <h2 data-t="hPic">🧩 ジグソーパズルの絵を選ぶ</h2>
   <h3 class="subh" data-t="hCat">出た猫</h3>
   <p class="catMsg" id="catMsg"></p>
@@ -554,6 +581,28 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   </div>
 </section>
 
+<section id="mmStart" class="screen">
+  <div class="topRow"><button class="mnb" data-t="back">◀ 戻る</button><div class="langRow"><div class="lang"><span class="lbl" data-t="lang">文字</span><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></div></div></div>
+  <h1>🃏 <span data-t="gMm">神経衰弱</span></h1>
+  <p class="mmRule" data-t="mmRule">カードを2枚ずつめくって、同じ絵をそろえます</p>
+  <p class="noGift" id="mmMsg"></p>
+  <h2 data-t="mmHCnt">カードの枚数</h2>
+  <div class="counts" id="mmCnts"></div>
+  <button class="go" id="mmGo" data-t="go">始める</button>
+</section>
+
+<section id="mmPlay" class="screen">
+  <div class="bar">
+    <button class="tb" id="mmBackBtn" style="margin-right:22px" data-t="back">◀ 戻る</button>
+    <button class="tb" id="mmSetBtn" data-t="set">設定</button>
+    <span class="sp"></span>
+    <span class="info"><span data-t="mmGot1">そろった</span> <b id="mmGot">0</b> <span id="mmGotN"></span></span>
+    <span class="info"><span data-t="mmMv1">めくった</span> <b id="mmMv">0</b> <span data-t="mmMv2">回</span></span>
+    <span class="info">⏱ <b id="mmTime">0:00</b></span>
+  </div>
+  <div id="mmArea"><div id="mmGrid"></div></div>
+</section>
+
 <div class="toast" id="toast"></div>
 <div id="qpBack"></div>
 <div id="qp"><div class="qpT" data-t="sdMemo">✏️ メモ</div><div class="qpN" id="qpN"></div><div class="qpR"><button class="tb" id="qpErase" data-t="sdErase">消す</button><button class="tb" id="qpClose" data-t="close">閉じる</button></div></div>
@@ -648,6 +697,36 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <button class="bb s" id="sdNewYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="sdNewYes">新しく始める</button>
 </div></div>
 
+<div class="ov" id="mmNewOv"><div class="dlg">
+  <h3 id="mmNewH" data-t="jgNewQ">新しく始めますか?</h3>
+  <p id="mmNewPp" data-t="mmNewP">途中の神経衰弱は消えます</p>
+  <button class="bb p" id="mmNewNo" style="width:100%;min-height:96px;font-size:32px" data-t="sdNewNo">続きを遊ぶ</button>
+  <div style="height:56px"></div>
+  <button class="bb s" id="mmNewYes" style="min-height:64px;min-width:160px;font-size:22px" data-t="sdNewYes">新しく始める</button>
+</div></div>
+
+<div class="ov" id="mmSetOv"><div class="dlg">
+  <h3 data-t="set">設定</h3>
+  <button class="tg on" id="mmSoundBtn"><span data-t="sound">音</span><b>あり</b></button>
+  <div class="lang dl"><span class="lbl" data-t="lang">文字</span><span style="display:flex;gap:10px"><button class="lgb" data-v="0">漢字</button><button class="lgb" data-v="1">ひらがな</button></span></div>
+  <button class="tg test" id="mmTestFill" style="display:none" data-t="testMm">🛠 全部そろえる(テスト用)</button>
+  <button class="bb p" id="mmSetClose" data-t="close">閉じる</button>
+  <div class="ver"></div>
+</div></div>
+
+<div class="ov" id="mmDoneOv"><div class="dlg">
+  <div class="newrec" id="mmNewRec" style="display:none" data-t="sdNewRec">🏆 新記録!</div>
+  <h3>🎉 <span data-t="mmDone">そろいました!</span></h3>
+  <p id="mmDoneMsg">よくできました</p>
+  <p id="mmRecInfo" class="recinfo"></p>
+  <p class="gift" id="mmGift" style="display:none" data-t="mmGift">🐱 ナンプレで、今日もう1枚 新しい猫を出せるようになりました</p>
+  <button class="bb p" id="mmAgainBtn" style="width:100%;min-height:88px;font-size:30px;margin-bottom:16px" data-t="mmAgain">もう一度</button>
+  <div class="row">
+    <button class="bb s" id="mmOtherBtn" data-t="mmOther">枚数を変える</button>
+    <button class="bb s" id="mmHomeBtn" data-t="sdHome">🏠 最初の画面へ</button>
+  </div>
+</div></div>
+
 <div class="ov" id="doneOv"><div class="dlg">
   <span class="qw" id="doneQw"><img id="doneImg" alt=""><span class="qbg" id="doneQ"></span></span>
   <p class="lphint" id="doneLp"></p>
@@ -706,11 +785,11 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <button class="bb p admApv" id="admApv" data-t="admApvBtn">📋 許可リストの管理</button>
   <p class="src" id="admSrc"></p>
   <button class="bb s" id="admBadClr" data-t="admBadClr" style="display:none">❗ 合わない写真をもう一度確かめる</button>
-  <div class="admLim"><span data-t="admLim">新しい猫(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
+  <div class="admLim"><span data-t="admLim">ナンプレの新しい猫(1日)</span><button class="tb" id="admLimDn">−</button><b id="admLimV"></b><button class="tb" id="admLimUp">+</button></div>
   <div class="admLim"><span class="src" id="admUsed"></span><button class="tb" id="admReset" data-t="admReset">0に戻す</button></div>
   <button class="bb s" id="admInit" data-t="admInit">解放を最初に戻す(テスト用)</button>
   <button class="bb s" id="admAll"></button>
-  <p class="src" data-t="admInitP">出た猫を最初の6枚に、今日の数を0に戻し、消した写真も元に戻します</p>
+  <p class="src" data-t="admInitP">出た猫を最初の6枚に、今日の数と神経衰弱のぶんを0に戻し、消した写真も元に戻します</p>
   <button class="tg" id="admTest"><span data-t="admTest">テスト用のボタン</span><b>なし</b></button>
   <p class="src" id="admDb"></p>
   <button class="bb s" id="admClose" data-t="close">閉じる</button>
@@ -749,6 +828,6 @@ h2{font-size:26px;margin:24px auto 12px;width:100%;max-width:980px}
   <div class="row"><button class="bb s" id="apvZPrev" data-t="apvZPrev">◀ 前</button><button class="bb s" id="apvZClose" data-t="close">閉じる</button><button class="bb s" id="apvZNext" data-t="apvZNext">次 ▶</button></div>
 </div></div>
 
-<script src="app.js?v=20261119040753"></script>
+<script src="app.js?v=20261119043311"></script>
 </body>
 </html>
