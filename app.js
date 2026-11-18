@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118211724';
+const APP_VERSION='20261118215657';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -230,6 +230,11 @@ const T={
   giftZoomR:['この写真は、アプリからは保存できません。絵を長押しして「写真に追加」を選ぶと、写真アプリに入ります','この しゃしんは、アプリからは ほぞん できません。えを ながおしして「しゃしんに ついか」を えらぶと、しゃしん アプリに はいります'],
   keepFavOff:['この猫は、★をやめると一覧から消えます(もう出てきません)。消してよい場合は、もう一度押してください','この ねこは、★を やめると いちらんから きえます(もう でてきません)。けして よい ばあいは、もう いちど おしてください'],
   keepFavOff2:['もう一度押すと★をやめます','もう いちど おすと ★を やめます'],
+  slideBtn:['🖼 スライドショー','🖼 スライドショー'],
+  slideNone:['ジグソーパズルをクリアした猫(🎁)が、スライドショーで見られます','ジグソーパズルを クリアした ねこ(🎁)が、スライドショーで みられます'],
+  slideHint:['画面をタップすると、次の写真になります','がめんを タップすると、つぎの しゃしんに なります'],
+  slideEnd:['おわる','おわる'],
+  slideIntL:['秒ごと','びょう ごと'],
   zoomNoL:['ID','ID'],
   catAllNote:['テスト中:全部の猫を出しています(アプリを閉じると戻ります)','テストちゅう:ぜんぶの ねこを だしています(アプリを とじると もどります)'],
   admInit2:['もう一度押すと戻します','もういちど おすと もどします'],
@@ -857,6 +862,7 @@ function renderCatPics(){
   $('#catBtns').style.display=show&&catItems.length?'':'none';
   q.style.display=show?'':'none';
   $('#catReBox').style.display=show?'':'none';
+  slideBtnPaint();
   renderSdCard();
   if(catState==='loading'){
     for(let i=0;i<APV_FIRST;i++){const d=mk('div','pic wait');d.appendChild(mk('div','ph',t('catWait')));box.appendChild(d);}
@@ -996,6 +1002,79 @@ $('#zoomOv').onclick=e=>{if(e.target.id==='zoomOv'||e.target.classList.contains(
 $('#zoomClose').onclick=zoomClose;
 $('#picZoom').onclick=()=>{ensureAudio();if(selApi<0&&selAlb<0)zoomOpen(images[selPic]);};
 $('#albZoom').onclick=()=>{ensureAudio();if(selAlb>=0)zoomOpen(albItems[selAlb]);};
+
+/* ====== スライドショー(🎁の猫を数秒おきにランダムで。時刻と日付、タップで次へ) ====== */
+const SLIDE_INT_KEY='neko-slide-int',SLIDE_INTS=[5,10,20,30];
+let slideOn=false,slideQ=[],slideLast='',slideTm=null,slideClk=null,slideHintT=null,slideCur=0,slideLock=null;
+function slideInt(){try{const v=Number(localStorage.getItem(SLIDE_INT_KEY));return SLIDE_INTS.includes(v)?v:10;}catch(e){return 10;}}
+// 🎁の猫(出た猫の一覧にある猫だけ。消した猫・一覧から消えた猫は出さない)
+function slideItems(){const g=new Set(catGift());return catItems.filter(o=>o&&g.has(o.ou)&&o.url);}
+function slideBtnPaint(){
+  const b=$('#slideBtn'),box=$('#slideBox');if(!b||!box)return;
+  const ok=catState==='ok'&&catItems.length>0;box.style.display=ok?'':'none';
+  b.textContent=t('slideBtn')+(kana?'(🎁 ':'(🎁 ')+slideItems().length+(kana?'まい)':'枚)');
+}
+function slideShuffle(){
+  const a=slideItems().map(o=>o.ou);
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  if(a.length>1&&a[0]===slideLast)a.push(a.shift()); // 同じ猫が続かないように
+  slideQ=a;
+}
+function slideNext(){
+  if(!slideOn)return;
+  clearTimeout(slideTm);
+  let it=null;
+  for(let n=0;n<2&&!it;n++){
+    if(!slideQ.length)slideShuffle();
+    while(slideQ.length&&!it){const u=slideQ.shift();it=slideItems().find(o=>o.ou===u)||null;}
+  }
+  if(!it){slideClose();toast('slideNone',3500);return;}
+  slideLast=it.ou;
+  const imgs=[$('#slideA'),$('#slideB')],nx=imgs[1-slideCur],cu=imgs[slideCur];
+  const go=()=>{if(!slideOn)return;nx.classList.add('on');cu.classList.remove('on');slideCur=1-slideCur;};
+  nx.onload=go;nx.onerror=()=>{if(slideOn&&slideItems().length>1)slideTm=setTimeout(slideNext,300);};
+  const u=safeImgUrl(it.url);
+  if(nx.getAttribute('src')===u&&nx.complete)go();else nx.src=u;
+  slideTm=setTimeout(slideNext,slideInt()*1000);
+}
+const SLIDE_WD=[['日','月','火','水','木','金','土'],['にち','げつ','か','すい','もく','きん','ど']];
+function slideClock(){
+  const d=new Date();
+  $('#slideTime').textContent=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  $('#slideDate').textContent=kana?(d.getMonth()+1)+'がつ '+d.getDate()+'にち('+SLIDE_WD[1][d.getDay()]+')':(d.getMonth()+1)+'月'+d.getDate()+'日('+SLIDE_WD[0][d.getDay()]+')';
+}
+function slideIntPaint(){$('#slideInt').textContent='⏱ '+slideInt()+t('slideIntL');}
+// 画面を消さない(iPad の Safari 16.4 以降。使えないときは何もしない)
+async function slideWake(){
+  if(!slideOn||slideLock||!('wakeLock' in navigator))return;
+  try{const l=await navigator.wakeLock.request('screen');if(!slideOn){l.release().catch(()=>{});return;}slideLock=l;l.addEventListener('release',()=>{if(slideLock===l)slideLock=null;});}catch(e){slideLock=null;}
+}
+function slideOpen(){
+  if(!slideItems().length){toast('slideNone',3500);return;}
+  slideOn=true;slideQ=[];slideCur=0;
+  [$('#slideA'),$('#slideB')].forEach(e=>{e.classList.remove('on');e.removeAttribute('src');});
+  slideIntPaint();slideClock();clearInterval(slideClk);slideClk=setInterval(slideClock,5000);
+  const h=$('#slideHint');h.textContent=t('slideHint');h.classList.remove('off');clearTimeout(slideHintT);slideHintT=setTimeout(()=>h.classList.add('off'),6000);
+  $('#slideOv').classList.add('on');
+  slideWake();slideNext();
+}
+function slideClose(){
+  slideOn=false;clearTimeout(slideTm);clearInterval(slideClk);clearTimeout(slideHintT);
+  $('#slideOv').classList.remove('on');
+  [$('#slideA'),$('#slideB')].forEach(e=>{e.onload=e.onerror=null;e.classList.remove('on');e.removeAttribute('src');});
+  if(slideLock){slideLock.release().catch(()=>{});slideLock=null;}
+  slideBtnPaint();
+}
+$('#slideBtn').onclick=()=>{ensureAudio();slideOpen();};
+$('#slideEnd').onclick=e=>{e.stopPropagation();slideClose();};
+$('#slideInt').onclick=e=>{
+  e.stopPropagation();
+  const v=SLIDE_INTS[(SLIDE_INTS.indexOf(slideInt())+1)%SLIDE_INTS.length];
+  try{localStorage.setItem(SLIDE_INT_KEY,String(v));}catch(er){}
+  slideIntPaint();clearTimeout(slideTm);slideTm=setTimeout(slideNext,v*1000);
+};
+$('#slideW').onclick=()=>{if(slideOn)slideNext();};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&slideOn){slideClock();slideWake();}});
 
 /* ====== ごほうびの絵(クリアした猫の写真。iPad内の IndexedDB 'album' に保存) ====== */
 // {v:1, list:[{id, src, ou, blob:JPEG, at:ms}]}。新しい順。100枚まで(超えたら古いものから消える)
