@@ -1,7 +1,7 @@
 /* ====== 版番号 ====== */
 // 上書き公開のたびに、公開時刻(日本時間・年月日時分秒の14桁)へ更新する。
 // index.html の app.js?v=… と version.json も同じ値にそろえる
-const APP_VERSION='20261118211116';
+const APP_VERSION='20261118211724';
 // 公開ページのURL(新しい版のお知らせの「更新する」で開き直す)
 const APP_URL='https://kengoodjob.github.io/neko-puzzle/';
 document.querySelectorAll('.ver').forEach(e=>{e.textContent='v'+APP_VERSION;});
@@ -220,6 +220,7 @@ const T={
   favOn:['★ お気に入りにする','★ おきにいりに する'],
   favOff:['★ お気に入りをやめる','★ おきにいりを やめる'],
   favCnt:['お気に入り','おきにいり'],
+  testGiftDel:['🛠 🎁を外す(テスト用)','🛠 🎁を はずす(テストよう)'],testGiftDone:['🎁を外しました(テスト用)','🎁を はずしました(テストよう)'],
   favFull:['お気に入りは10枚までです。ほかの猫の★をやめてから付けてください','おきにいりは 10まい までです。ほかの ねこの ★を やめてから つけてください'],
   giftNew:['🎁 この猫を、iPadに保存できるようになりました','🎁 この ねこを、iPadに ほぞん できるように なりました'],
   giftMark:['🎁 クリアした猫の印が付きました','🎁 クリアした ねこの しるしが つきました'],
@@ -824,6 +825,11 @@ $('#albDel').onclick=()=>{ensureAudio();albDelAsk();};
 $('#catFold').onclick=()=>{apvFold=!apvFold;renderCatPics();};
 $('#catZoom').onclick=()=>{ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(o)zoomOpen(o);};
 let favOffAt=0,favOffU='';
+$('#catGiftDel').onclick=()=>{
+  ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(!o||!testOn()||!hasGift(o))return;
+  urlListSave(CAT_GIFT_KEY,catGift().filter(x=>x!==o.ou));apvKeepPrune();
+  toast('testGiftDone',2000);renderAllPics();renderSel();
+};
 $('#catFav').onclick=()=>{
   ensureAudio();const o=selApi>=0?catItems[selApi]:null;if(!o)return;
   if(o.kept&&!hasGift(o)&&catFav().includes(o.ou)){
@@ -882,6 +888,8 @@ function renderCatPics(){
   const fb2=$('#catFav'),fon=!!so&&fv.has(so.ou);fb2.disabled=!so;fb2.classList.toggle('on',fon);
   fb2.replaceChildren(document.createTextNode(t(fon?'favOff':'favOn')),mk('small',null,t('favCnt')+' '+fv.size+' / '+CAT_FAV_MAX));
   q.textContent=catShowAll?t('catAllNote'):t('apvClearHelp');
+  // テスト用:選んだ猫の🎁を外す(テスト用のボタンが「あり」で、🎁の猫を選んでいるときだけ)
+  const gd=$('#catGiftDel');if(gd)gd.style.display=testOn()&&so&&hasGift(so)?'':'none';
 }
 const curItem=()=>selApi>=0&&catItems[selApi]?catItems[selApi]:selAlb>=0&&albItems[selAlb]?albItems[selAlb]:images[selPic];
 function renderAllPics(){renderCatPics();renderAlb();renderPics();}
@@ -2174,10 +2182,10 @@ function sdFinish(){
   $('#sdGift').style.display='none';sdNewCatPaint();
   if(sdNewNo)[784,988,1175].forEach((f,i)=>tone(f,1.6+i*.14,.35,.12));
   donePrep(sdItem,'#sdSave');
-  // 数字と線を消して絵だけを約3秒見せてから完成画面(タップするとすぐ完成画面)。2026-11-18
+  // 数字と線を消して絵だけを約6秒見せてから完成画面(タップするとすぐ完成画面)。2026-11-18
   const gen=++sdFinGen;$('#sdFinTap').classList.add('on');
   setTimeout(()=>{if(gen===sdFinGen)$('#sdBoard').classList.add('fin');},300);
-  setTimeout(()=>sdFinShow(gen),3300);
+  setTimeout(()=>sdFinShow(gen),6300);
 }
 let sdFinGen=0;
 function sdFinShow(gen){if(gen!==sdFinGen)return;sdFinGen++;$('#sdFinTap').classList.remove('on');$('#sdDoneOv').classList.add('on');}
@@ -2357,8 +2365,8 @@ if($('#admAll'))$('#admAll').onclick=()=>{catShowAll=!catShowAll;selApi=-1;apvRe
 $('#admClose').onclick=()=>{$('#admKey').value='';$('#admKey').blur();$('#admOv').classList.remove('on');};
 // テスト用のボタン(ナンプレの「答えを埋める」・ジグソーの「全部はめる」)。この端末だけ
 const TEST_KEY='neko-test';
-function testOn(){try{return localStorage.getItem(TEST_KEY)==='1';}catch(e){return false;}}
-function renderTest(){const on=testOn();$('#sdTestFill').style.display=on?'':'none';$('#jgTestFill').style.display=on?'':'none';}
+function testOn(){try{return localStorage.getItem('neko-test')==='1';}catch(e){return false;}}
+function renderTest(){const on=testOn();$('#sdTestFill').style.display=on?'':'none';$('#jgTestFill').style.display=on?'':'none';if(typeof renderCatPics==='function')renderCatPics();}
 $('#admTest').onclick=()=>{try{if(testOn())localStorage.removeItem(TEST_KEY);else localStorage.setItem(TEST_KEY,'1');}catch(e){}renderTest();admRender('');};
 $('#sdTestFill').onclick=()=>{
   $('#sdSetOv').classList.remove('on');
